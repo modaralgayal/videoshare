@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { connectToBackend } from "./controllers/user";
+import { Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import "./App.css";
+import SignIn from "./pages/signIn";
+import { Home } from "./pages/home";
 
 function App() {
   const [answer, setAnswer] = useState("No answer");
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     connectToBackend()
@@ -15,13 +19,18 @@ function App() {
       .catch((err) => {
         setError(err?.message || err);
       });
-  });
+  }, []);
 
   return (
     <>
-      {error && <div>{error}</div>}
 
-      <h1>{answer}</h1>
+      <Routes>
+        <Route path="/signin" element={<SignIn />} />
+
+        <Route path="/" element={<Home />} />
+
+
+      </Routes>
     </>
   );
 }

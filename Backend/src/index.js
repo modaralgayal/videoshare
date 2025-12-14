@@ -8,7 +8,7 @@ app.use(cors());
 
 app.get("/", (req, res) => {
   res.status(200);
-  res.send(`Backend connected`);
+  res.send(`Hello world`);
 });
 
 app.listen(PORT, (error) => {
