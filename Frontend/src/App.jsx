@@ -4,6 +4,7 @@ import { Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import "./App.css";
 import SignIn from "./pages/signIn";
 import { Home } from "./pages/home";
+import { Jobs } from "./pages/jobs";
 
 function App() {
   const [answer, setAnswer] = useState("No answer");
@@ -23,13 +24,12 @@ function App() {
 
   return (
     <>
-
       <Routes>
         <Route path="/signin" element={<SignIn />} />
 
         <Route path="/" element={<Home />} />
 
-
+        <Route path="/jobs" element={<Jobs />} />
       </Routes>
     </>
   );

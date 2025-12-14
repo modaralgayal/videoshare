@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "role": "customer",
+    "name": "Alice Johnson"
+  },
+  {
+    "id": 2,
+    "role": "videographer",
+    "name": "Mark Rivera"
+  },
+  {
+    "id": 3,
+    "role": "customer",
+    "name": "Sophie Chen"
+  }
+]

@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "job_id": 1,
+    "videographer_id": 2,
+    "price": 1100,
+    "proposal": "I have 5+ years of experience filming weddings and can deliver a cinematic highlight.",
+    "status": "pending"
+  },
+  {
+    "id": 2,
+    "job_id": 2,
+    "videographer_id": 2,
+    "price": 850,
+    "proposal": "I can create a clean, high-energy promo tailored for social media platforms.",
+    "status": "accepted"
+  },
+  {
+    "id": 3,
+    "job_id": 3,
+    "videographer_id": 2,
+    "price": 550,
+    "proposal": "Experienced with real estate walkthroughs and drone shots if needed.",
+    "status": "pending"
+  },
+  {
+    "id": 4,
+    "job_id": 4,
+    "videographer_id": 2,
+    "price": 950,
+    "proposal": "Professional interview setup with lighting, audio, and polished edits.",
+    "status": "pending"
+  },
+  {
+    "id": 5,
+    "job_id": 5,
+    "videographer_id": 2,
+    "price": 600,
+    "proposal": "Fast turnaround event recap with engaging highlight moments.",
+    "status": "accepted"
+  },
+  {
+    "id": 6,
+    "job_id": 6,
+    "videographer_id": 2,
+    "price": 250,
+    "proposal": "Animated intro with motion graphics aligned to your brand.",
+    "status": "pending"
+  },
+  {
+    "id": 7,
+    "job_id": 7,
+    "videographer_id": 2,
+    "price": 1600,
+    "proposal": "Creative direction and cinematic visuals for an impactful music video.",
+    "status": "pending"
+  },
+  {
+    "id": 8,
+    "job_id": 8,
+    "videographer_id": 2,
+    "price": 450,
+    "proposal": "Optimized vertical videos for TikTok and Instagram Reels.",
+    "status": "accepted"
+  },
+  {
+    "id": 9,
+    "job_id": 9,
+    "videographer_id": 2,
+    "price": 1800,
+    "proposal": "Multi-camera conference recording with clear audio capture.",
+    "status": "pending"
+  },
+  {
+    "id": 10,
+    "job_id": 10,
+    "videographer_id": 2,
+    "price": 1300,
+    "proposal": "Story-driven brand film with professional color grading.",
+    "status": "pending"
+  }
+]
