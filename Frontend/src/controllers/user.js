@@ -21,6 +21,13 @@ export const logout = () => {
   localStorage.removeItem("user");
 };
 
+// Check if user is authenticated
+export const isAuthenticated = () => {
+  const token = getToken();
+  const user = getUser();
+  return !!(token && user);
+};
+
 // Create axios instance with auth token
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

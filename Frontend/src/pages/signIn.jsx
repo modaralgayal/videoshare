@@ -1,11 +1,20 @@
-import { useState } from "react";
-import { googleSignIn, authenticateWithBackend } from "../controllers/user";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { googleSignIn, authenticateWithBackend, isAuthenticated } from "../controllers/user";
 
 export const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [userType, setUserType] = useState(""); // "photographer" or "customer"
   const [showUserTypeSelection, setShowUserTypeSelection] = useState(false);
+  const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate("/");
+    }
+  }, [navigate]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -38,8 +47,8 @@ export const SignIn = () => {
       setShowUserTypeSelection(false);
       setUserType("");
 
-      // Redirect or update UI as needed
-      alert(`Successfully signed in as ${selectedType}!`);
+      // Redirect to home page
+      navigate("/");
     } catch (error) {
       console.error("Google Sign-In Error:", error);
       alert(error.message || "Authentication failed");
