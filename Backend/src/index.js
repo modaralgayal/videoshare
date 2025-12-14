@@ -1,11 +1,14 @@
 import express from "express";
+import cors from "cors";
 
 const app = express();
 const PORT = 3000;
 
+app.use(cors());
+
 app.get("/", (req, res) => {
   res.status(200);
-  res.send(`<h1> Hello People </h1>`);
+  res.send(`Backend connected`);
 });
 
 app.listen(PORT, (error) => {
