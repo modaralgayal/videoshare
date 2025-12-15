@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { connectToBackend, getUser, logout } from "../controllers/user";
-import { signOut } from "firebase/auth";
-import { auth } from "../config/firebaseConfig";
+import { connectToBackend, getUser } from "../controllers/user";
 
 export const Home = () => {
   const [error, setError] = useState("");
@@ -31,22 +29,6 @@ export const Home = () => {
       });
   }, [navigate]);
 
-  const handleLogout = async () => {
-    try {
-      // Sign out from Firebase
-      await signOut(auth);
-      // Clear JWT token and user data
-      logout();
-      // Redirect to sign in page
-      navigate("/signin");
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Even if Firebase sign out fails, clear local storage and redirect
-      logout();
-      navigate("/signin");
-    }
-  };
-
   // Show loading or redirect if no user
   if (!user) {
     return null;
@@ -57,27 +39,10 @@ export const Home = () => {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px", borderBottom: "1px solid #ccc" }}>
-        <h1>Welcome, {user.name || user.email}!</h1>
-        <button 
-          onClick={handleLogout}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: "#dc3545",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-            fontSize: "16px"
-          }}
-        >
-          Logout
-        </button>
-      </div>
-
-      {error && <div style={{ color: "red", padding: "10px" }}>{error}</div>}
-
       <div style={{ padding: "20px" }}>
+        <h1>Welcome, {user.name || user.email}!</h1>
+
+        {error && <div style={{ color: "red", padding: "10px" }}>{error}</div>}
         {isPhotographer && (
           <div>
             <h2>Photographer Dashboard</h2>
@@ -135,7 +100,7 @@ export const Home = () => {
                 View My Jobs
               </button>
               <button 
-                onClick={() => navigate("/jobs")}
+                onClick={() => navigate("/post-job")}
                 style={{
                   padding: "10px 20px",
                   backgroundColor: "#007bff",
