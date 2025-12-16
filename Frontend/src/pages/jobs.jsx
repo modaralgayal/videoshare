@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { fetchJobs } from "../controllers/jobs";
 import { getUser } from "../controllers/user";
+import { useNavigate } from "react-router-dom";
 
 export const Jobs = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  const navigate = useNavigate();
   const user = getUser();
   const isPhotographer = user?.userType === "photographer";
   const isCustomer = user?.userType === "customer";
@@ -59,9 +60,7 @@ export const Jobs = () => {
         </div>
       )}
 
-      {!loading && !error && filteredJobs.length === 0 && (
-        <p>No jobs found.</p>
-      )}
+      {!loading && !error && filteredJobs.length === 0 && <p>No jobs found.</p>}
 
       {!loading && !error && filteredJobs.length > 0 && (
         <ul style={{ listStyle: "none", padding: 0, marginTop: "1rem" }}>
@@ -82,7 +81,9 @@ export const Jobs = () => {
                 Budget: €{job.budget_min} – €{job.budget_max}
               </p>
               <small>Status: {job.status}</small>
-              <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}>
+              <div
+                style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}
+              >
                 {isPhotographer && (
                   <>
                     <button
@@ -95,6 +96,7 @@ export const Jobs = () => {
                         cursor: "pointer",
                         fontSize: "14px",
                       }}
+                      onClick={() => navigate("/make-bid", { state: { job } })}
                     >
                       Make a Bid
                     </button>

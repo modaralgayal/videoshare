@@ -58,4 +58,35 @@ router.get("/api/jobs", async (req, res) => {
   }
 });
 
+router.post("/api/bid", async (req, res) => {
+  try {
+    const id = uuidv4();
+    const bid = {
+      id: id,
+      bidId: id,
+      jobId: req.body.jobId,
+      videographerId: req.body.videographerId,
+      price: req.body.price,
+      proposal: req.body.proposal,
+      status: req.body.status || "pending",
+    };
+
+    await ddb.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: bid,
+      })
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Bid submitted successfully",
+      bid,
+    });
+  } catch (error) {
+    console.error("Error posting bid:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

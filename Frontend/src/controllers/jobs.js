@@ -43,3 +43,26 @@ export const fetchJobs = async () => {
     throw new Error(errorMessage);
   }
 };
+
+export const makeBid = async (bid) => {
+  try {
+    const response = await apiClient.post(`${API_URL}/api/bid`, bid);
+
+    if (response.data.success) {
+      return {
+        success: true,
+        message: response.data.message,
+        bid: response.data.bid || null,
+      };
+    } else {
+      throw new Error(response.data.message || "Failed to submit bid");
+    }
+  } catch (error) {
+    const errorMessage =
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
+      "Failed to submit bid. Please try again.";
+    throw new Error(errorMessage);
+  }
+};

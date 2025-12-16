@@ -5,6 +5,7 @@ import "./App.css";
 import SignIn from "./pages/signIn";
 import { Home } from "./pages/home";
 import { Jobs } from "./pages/jobs";
+import { MakeBid } from "./pages/makeBid";
 import PostJob from "./pages/PostJob";
 import Navbar from "./components/Navbar";
 
@@ -36,6 +37,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/jobs" element={<Jobs />} />
         <Route path="/post-job" element={<PostJob />} />
+        <Route path="/make-bid" element={<MakeBid />} />
       </Routes>
     </>
   );
