@@ -49,7 +49,7 @@ export const Navbar = () => {
           style={{ margin: 0, cursor: "pointer" }}
           onClick={() => navigate("/")}
         >
-          VideoKuvaajat
+          Kuvauspalvelut
         </h2>
 
         {isCustomer && (

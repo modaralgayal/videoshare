@@ -366,4 +366,92 @@ router.get("/api/my-bids", authenticateToken, async (req, res) => {
   }
 });
 
+// Save/Update photographer portfolio (photographers only)
+router.put("/api/portfolio", authenticateToken, async (req, res) => {
+  try {
+    // Authorization: Only photographers can update their portfolio
+    if (req.user.userType !== "photographer") {
+      return res.status(403).json({ error: "Only photographers can update their portfolio" });
+    }
+
+    const photographerId = req.user.uid;
+    const { description, items } = req.body;
+
+    // Validate description
+    if (description && typeof description === "string" && description.length > 1000) {
+      return res.status(400).json({ error: "Description must be 1000 characters or less" });
+    }
+
+    // Create portfolio object
+    const portfolio = {
+      id: `portfolio_${photographerId}`,
+      photographerId: photographerId,
+      description: description || "",
+      items: items || [],
+      updatedAt: new Date().toISOString(),
+    };
+
+    await ddb.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: portfolio,
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Portfolio updated successfully",
+      portfolio,
+    });
+  } catch (error) {
+    console.error("Error saving portfolio:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get photographer portfolio (for customers to view, or photographers to view their own)
+router.get("/api/portfolio/:photographerId", authenticateToken, async (req, res) => {
+  try {
+    const { photographerId } = req.params;
+    const currentUser = req.user;
+
+    // Scan all items from the table
+    const result = await ddb.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+      })
+    );
+
+    const allItems = result.Items || [];
+
+    // Find portfolio for this photographer (look for items with portfolio id prefix)
+    const portfolio = allItems.find(
+      (item) => item.id === `portfolio_${photographerId}` && item.photographerId === photographerId
+    );
+
+    if (!portfolio) {
+      return res.status(200).json({
+        success: true,
+        portfolio: {
+          photographerId,
+          description: "",
+          items: [],
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      portfolio: {
+        photographerId: portfolio.photographerId,
+        description: portfolio.description || "",
+        items: portfolio.items || [],
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching photographer portfolio:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

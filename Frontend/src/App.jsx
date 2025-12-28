@@ -10,6 +10,7 @@ import PostJob from "./pages/PostJob";
 import ViewBids from "./pages/ViewBids";
 import MyBids from "./pages/MyBids";
 import Portfolio from "./pages/Portfolio";
+import ViewPhotographerPortfolio from "./pages/ViewPhotographerPortfolio";
 import Navbar from "./components/Navbar";
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
         <Route path="/view-bids" element={<ViewBids />} />
         <Route path="/my-bids" element={<MyBids />} />
         <Route path="/portfolio" element={<Portfolio />} />
+        <Route path="/photographer/:photographerId/portfolio" element={<ViewPhotographerPortfolio />} />
         </Routes>
       </div>
     </>

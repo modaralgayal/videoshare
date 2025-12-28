@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUser, isAuthenticated } from "../controllers/user";
+import { savePortfolio, fetchPhotographerPortfolio } from "../controllers/portfolio";
 
 export const Portfolio = () => {
   const navigate = useNavigate();
@@ -19,40 +20,56 @@ export const Portfolio = () => {
     }
   }, [navigate, user]);
 
-  // Load portfolio data (placeholder for now)
+  // Load portfolio data from backend
   useEffect(() => {
-    if (user && user.userType === "photographer") {
-      setLoading(true);
-      // TODO: Fetch portfolio items and description from backend
-      // For now, using empty array and empty description
-      setPortfolioItems([]);
-      // TODO: Load description from backend/localStorage
-      const savedDescription = localStorage.getItem(`portfolio_description_${user.uid}`) || "";
-      setDescription(savedDescription);
-      setLoading(false);
-    }
+    const loadPortfolio = async () => {
+      if (user && user.userType === "photographer" && user.uid) {
+        setLoading(true);
+        try {
+          const portfolioData = await fetchPhotographerPortfolio(user.uid);
+          setDescription(portfolioData.description || "");
+          setPortfolioItems(portfolioData.items || []);
+        } catch (err) {
+          console.error("Error loading portfolio:", err);
+          // If error, start with empty portfolio
+          setDescription("");
+          setPortfolioItems([]);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadPortfolio();
   }, [user]);
 
-  const handleSaveDescription = () => {
+  const handleSaveDescription = async () => {
     if (description.length > 1000) {
       setDescriptionError("Description must be 1000 characters or less");
       return;
     }
 
-    // TODO: Save description to backend
-    // For now, save to localStorage
-    if (user?.uid) {
-      localStorage.setItem(`portfolio_description_${user.uid}`, description);
+    try {
+      // Save to backend
+      await savePortfolio(description, portfolioItems);
+      
+      setIsEditingDescription(false);
+      setDescriptionError("");
+    } catch (err) {
+      setDescriptionError(err.message || "Failed to save description. Please try again.");
     }
-    
-    setIsEditingDescription(false);
-    setDescriptionError("");
   };
 
-  const handleCancelEdit = () => {
-    // Reload original description
-    const savedDescription = localStorage.getItem(`portfolio_description_${user.uid}`) || "";
-    setDescription(savedDescription);
+  const handleCancelEdit = async () => {
+    try {
+      // Reload original description from backend
+      if (user?.uid) {
+        const portfolioData = await fetchPhotographerPortfolio(user.uid);
+        setDescription(portfolioData.description || "");
+      }
+    } catch (err) {
+      console.error("Error loading portfolio:", err);
+    }
     setIsEditingDescription(false);
     setDescriptionError("");
   };
