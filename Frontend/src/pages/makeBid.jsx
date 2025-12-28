@@ -55,9 +55,9 @@ export const MakeBid = () => {
     }
 
     try {
+      // videographerId is now set on backend from JWT token, don't send it
       const bidData = {
         jobId: job.id || job.jobId,
-        videographerId: user.uid,
         price: priceNum,
         proposal: proposal.trim(),
         status: "pending",
@@ -79,22 +79,25 @@ export const MakeBid = () => {
 
   return (
     <div style={{ maxWidth: "800px", margin: "2rem auto", padding: "0 1rem" }}>
-      <h1>Make a Bid</h1>
+      <h1 style={{ color: "#0F172A" }}>Make a Bid</h1>
 
       {/* Job Information */}
       <div
         style={{
-          padding: "1rem",
-          borderRadius: "5px",
+          padding: "1.5rem",
+          borderRadius: "8px",
           marginBottom: "2rem",
+          backgroundColor: "#FFFFFF",
+          border: "1px solid #E2E8F0",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
         }}
       >
-        <h2 style={{ marginTop: 0 }}>{job.title}</h2>
-        <p>{job.description}</p>
-        <p>
+        <h2 style={{ marginTop: 0, color: "#0F172A" }}>{job.title}</h2>
+        <p style={{ color: "#475569" }}>{job.description}</p>
+        <p style={{ color: "#475569" }}>
           <strong>Budget Range:</strong> €{job.budget_min} – €{job.budget_max}
         </p>
-        <p>
+        <p style={{ color: "#475569" }}>
           <strong>Status:</strong> {job.status}
         </p>
       </div>
@@ -138,6 +141,7 @@ export const MakeBid = () => {
               display: "block",
               marginBottom: "0.5rem",
               fontWeight: "bold",
+              color: "#0F172A",
             }}
           >
             Your Bid Price (€) *
@@ -156,13 +160,15 @@ export const MakeBid = () => {
               width: "100%",
               padding: "0.75rem",
               fontSize: "16px",
-              border: "1px solid #ddd",
+              border: "1px solid #E2E8F0",
               borderRadius: "5px",
               boxSizing: "border-box",
+              backgroundColor: "#FFFFFF",
+              color: "#0F172A",
             }}
           />
           <small
-            style={{ color: "#6c757d", marginTop: "0.25rem", display: "block" }}
+            style={{ color: "#475569", marginTop: "0.25rem", display: "block" }}
           >
             Budget range: €{job.budget_min} – €{job.budget_max}
           </small>
@@ -175,6 +181,7 @@ export const MakeBid = () => {
               display: "block",
               marginBottom: "0.5rem",
               fontWeight: "bold",
+              color: "#0F172A",
             }}
           >
             Your Proposal *
@@ -191,10 +198,12 @@ export const MakeBid = () => {
               width: "100%",
               padding: "0.75rem",
               fontSize: "16px",
-              border: "1px solid #ddd",
+              border: "1px solid #E2E8F0",
               borderRadius: "5px",
               boxSizing: "border-box",
               fontFamily: "inherit",
+              backgroundColor: "#FFFFFF",
+              color: "#0F172A",
             }}
           />
         </div>
@@ -204,7 +213,7 @@ export const MakeBid = () => {
             type="submit"
             disabled={loading}
             style={{
-              backgroundColor: "#007bff",
+              backgroundColor: "#F59E0B",
               color: "white",
               border: "none",
               padding: "0.75rem 2rem",
@@ -221,7 +230,7 @@ export const MakeBid = () => {
             type="button"
             onClick={() => navigate("/jobs")}
             style={{
-              backgroundColor: "#6c757d",
+              backgroundColor: "#1E3A8A",
               color: "white",
               border: "none",
               padding: "0.75rem 2rem",
@@ -229,6 +238,8 @@ export const MakeBid = () => {
               cursor: "pointer",
               fontSize: "16px",
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
           >
             Cancel
           </button>

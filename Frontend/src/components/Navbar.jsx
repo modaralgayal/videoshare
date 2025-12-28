@@ -30,13 +30,18 @@ export const Navbar = () => {
   return (
     <nav
       style={{
-        backgroundColor: "#343a40",
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: "#1E3A8A", // Primary
         color: "white",
         padding: "1rem 2rem",
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        zIndex: 1000,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
@@ -66,7 +71,7 @@ export const Navbar = () => {
             <button
               onClick={() => navigate("/post-job")}
               style={{
-                backgroundColor: "#28a745",
+                backgroundColor: "#F59E0B", // Accent/CTA
                 color: "white",
                 border: "none",
                 padding: "0.5rem 1rem",
@@ -74,6 +79,8 @@ export const Navbar = () => {
                 cursor: "pointer",
                 fontSize: "14px",
               }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#F59E0B"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#F59E0B"}
             >
               Post Job
             </button>
@@ -90,6 +97,20 @@ export const Navbar = () => {
               }}
             >
               My Jobs
+            </button>
+            <button
+              onClick={() => navigate("/view-bids")}
+              style={{
+                backgroundColor: "transparent",
+                color: "white",
+                border: "1px solid white",
+                padding: "0.5rem 1rem",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+            >
+              View Bids
             </button>
           </div>
         )}
@@ -113,9 +134,9 @@ export const Navbar = () => {
             <button
               onClick={() => navigate("/jobs")}
               style={{
-                backgroundColor: "#007bff",
+                backgroundColor: "transparent",
                 color: "white",
-                border: "none",
+                border: "1px solid white",
                 padding: "0.5rem 1rem",
                 borderRadius: "5px",
                 cursor: "pointer",
@@ -123,6 +144,34 @@ export const Navbar = () => {
               }}
             >
               Browse Jobs
+            </button>
+            <button
+              onClick={() => navigate("/my-bids")}
+              style={{
+                backgroundColor: "transparent",
+                color: "white",
+                border: "1px solid white",
+                padding: "0.5rem 1rem",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+            >
+              My Bids
+            </button>
+            <button
+              onClick={() => navigate("/portfolio")}
+              style={{
+                backgroundColor: "transparent",
+                color: "white",
+                border: "1px solid white",
+                padding: "0.5rem 1rem",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+            >
+              Portfolio
             </button>
           </div>
         )}
@@ -135,9 +184,9 @@ export const Navbar = () => {
         <button
           onClick={handleLogout}
           style={{
-            backgroundColor: "#dc3545",
+            backgroundColor: "transparent",
             color: "white",
-            border: "none",
+            border: "1px solid white",
             padding: "0.5rem 1rem",
             borderRadius: "5px",
             cursor: "pointer",
@@ -152,4 +201,5 @@ export const Navbar = () => {
 };
 
 export default Navbar;
+
 

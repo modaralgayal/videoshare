@@ -58,49 +58,106 @@ export const SignIn = () => {
   };
 
   return (
-    <>
-      <h1>Sign In</h1>
+    <div style={{ maxWidth: "500px", margin: "4rem auto", padding: "2rem", backgroundColor: "#FFFFFF", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", border: "1px solid #E2E8F0" }}>
+      <h1 style={{ color: "#0F172A", marginBottom: "2rem" }}>Sign In</h1>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Email</label>
-          <br />
+      <form onSubmit={handleSubmit} style={{ marginBottom: "2rem" }}>
+        <div style={{ marginBottom: "1.5rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem", color: "#0F172A", fontWeight: "600" }}>Email</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.75rem",
+              fontSize: "16px",
+              border: "1px solid #E2E8F0",
+              borderRadius: "5px",
+              boxSizing: "border-box",
+              backgroundColor: "#FFFFFF",
+              color: "#0F172A",
+            }}
           />
         </div>
 
-        <div>
-          <label>Password</label>
-          <br />
+        <div style={{ marginBottom: "1.5rem" }}>
+          <label style={{ display: "block", marginBottom: "0.5rem", color: "#0F172A", fontWeight: "600" }}>Password</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.75rem",
+              fontSize: "16px",
+              border: "1px solid #E2E8F0",
+              borderRadius: "5px",
+              boxSizing: "border-box",
+              backgroundColor: "#FFFFFF",
+              color: "#0F172A",
+            }}
           />
         </div>
 
-        <button type="submit">Sign In</button>
+        <button 
+          type="submit"
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            fontSize: "16px",
+            backgroundColor: "#1E3A8A",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontWeight: "600",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
+        >
+          Sign In
+        </button>
       </form>
 
       {!showUserTypeSelection ? (
-        <button type="button" onClick={handleGoogleSignIn}>
+        <button 
+          type="button" 
+          onClick={handleGoogleSignIn}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            fontSize: "16px",
+            backgroundColor: "#F59E0B",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontWeight: "600",
+          }}
+        >
           Sign in with Google
         </button>
       ) : (
         <div>
-          <h2>Choose your account type:</h2>
+          <h2 style={{ color: "#0F172A", marginBottom: "1.5rem" }}>Choose your account type:</h2>
           <button
             type="button"
             onClick={() => handleUserTypeSelection("photographer")}
             style={{
-              margin: "10px",
-              padding: "10px 20px",
+              width: "100%",
+              margin: "0.5rem 0",
+              padding: "0.75rem",
               fontSize: "16px",
+              backgroundColor: "#1E3A8A",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
               cursor: "pointer",
+              fontWeight: "600",
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
           >
             I'm a Photographer
           </button>
@@ -108,11 +165,19 @@ export const SignIn = () => {
             type="button"
             onClick={() => handleUserTypeSelection("customer")}
             style={{
-              margin: "10px",
-              padding: "10px 20px",
+              width: "100%",
+              margin: "0.5rem 0",
+              padding: "0.75rem",
               fontSize: "16px",
+              backgroundColor: "#1E3A8A",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
               cursor: "pointer",
+              fontWeight: "600",
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
           >
             I'm a Customer
           </button>
@@ -120,9 +185,14 @@ export const SignIn = () => {
             type="button"
             onClick={() => setShowUserTypeSelection(false)}
             style={{
-              margin: "10px",
-              padding: "10px 20px",
+              width: "100%",
+              margin: "0.5rem 0",
+              padding: "0.75rem",
               fontSize: "14px",
+              backgroundColor: "transparent",
+              color: "#475569",
+              border: "1px solid #E2E8F0",
+              borderRadius: "5px",
               cursor: "pointer",
             }}
           >
@@ -130,7 +200,7 @@ export const SignIn = () => {
           </button>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

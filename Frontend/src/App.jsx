@@ -7,6 +7,9 @@ import { Home } from "./pages/home";
 import { Jobs } from "./pages/jobs";
 import { MakeBid } from "./pages/makeBid";
 import PostJob from "./pages/PostJob";
+import ViewBids from "./pages/ViewBids";
+import MyBids from "./pages/MyBids";
+import Portfolio from "./pages/Portfolio";
 import Navbar from "./components/Navbar";
 
 function App() {
@@ -32,13 +35,18 @@ function App() {
   return (
     <>
       {showNavbar && <Navbar />}
-      <Routes>
+      <div style={{ paddingTop: showNavbar ? "73px" : "0" }}>
+        <Routes>
         <Route path="/signin" element={<SignIn />} />
         <Route path="/" element={<Home />} />
         <Route path="/jobs" element={<Jobs />} />
         <Route path="/post-job" element={<PostJob />} />
         <Route path="/make-bid" element={<MakeBid />} />
-      </Routes>
+        <Route path="/view-bids" element={<ViewBids />} />
+        <Route path="/my-bids" element={<MyBids />} />
+        <Route path="/portfolio" element={<Portfolio />} />
+        </Routes>
+      </div>
     </>
   );
 }

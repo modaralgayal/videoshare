@@ -73,8 +73,8 @@ export const PostJob = () => {
     }
 
     try {
+      // customerId is now set on backend from JWT token, don't send it
       const jobData = {
-        customerId: user.uid,
         title: formData.title.trim(),
         description: formData.description.trim(),
         budget_min: budgetMin,
@@ -104,7 +104,7 @@ export const PostJob = () => {
 
   return (
     <div style={{ maxWidth: "800px", margin: "2rem auto", padding: "0 1rem" }}>
-      <h1>Post a New Job</h1>
+      <h1 style={{ color: "#0F172A" }}>Post a New Job</h1>
 
       {error && (
         <div
@@ -136,7 +136,7 @@ export const PostJob = () => {
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
         <div>
-          <label htmlFor="title" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "bold" }}>
+          <label htmlFor="title" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "bold", color: "#0F172A" }}>
             Job Title *
           </label>
           <input
@@ -151,15 +151,17 @@ export const PostJob = () => {
               width: "100%",
               padding: "0.75rem",
               fontSize: "16px",
-              border: "1px solid #ddd",
+              border: "1px solid #E2E8F0",
               borderRadius: "5px",
               boxSizing: "border-box",
+              backgroundColor: "#FFFFFF",
+              color: "#0F172A",
             }}
           />
         </div>
 
         <div>
-          <label htmlFor="description" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "bold" }}>
+          <label htmlFor="description" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "bold", color: "#0F172A" }}>
             Description *
           </label>
           <textarea
@@ -174,17 +176,19 @@ export const PostJob = () => {
               width: "100%",
               padding: "0.75rem",
               fontSize: "16px",
-              border: "1px solid #ddd",
+              border: "1px solid #E2E8F0",
               borderRadius: "5px",
               boxSizing: "border-box",
               fontFamily: "inherit",
+              backgroundColor: "#FFFFFF",
+              color: "#0F172A",
             }}
           />
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
           <div>
-            <label htmlFor="budget_min" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "bold" }}>
+            <label htmlFor="budget_min" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "bold", color: "#0F172A" }}>
               Minimum Budget (€) *
             </label>
             <input
@@ -201,15 +205,17 @@ export const PostJob = () => {
                 width: "100%",
                 padding: "0.75rem",
                 fontSize: "16px",
-                border: "1px solid #ddd",
+                border: "1px solid #E2E8F0",
                 borderRadius: "5px",
                 boxSizing: "border-box",
+                backgroundColor: "#FFFFFF",
+                color: "#0F172A",
               }}
             />
           </div>
 
           <div>
-            <label htmlFor="budget_max" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "bold" }}>
+            <label htmlFor="budget_max" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "bold", color: "#0F172A" }}>
               Maximum Budget (€) *
             </label>
             <input
@@ -226,9 +232,11 @@ export const PostJob = () => {
                 width: "100%",
                 padding: "0.75rem",
                 fontSize: "16px",
-                border: "1px solid #ddd",
+                border: "1px solid #E2E8F0",
                 borderRadius: "5px",
                 boxSizing: "border-box",
+                backgroundColor: "#FFFFFF",
+                color: "#0F172A",
               }}
             />
           </div>
@@ -239,7 +247,7 @@ export const PostJob = () => {
             type="submit"
             disabled={loading}
             style={{
-              backgroundColor: "#28a745",
+              backgroundColor: "#F59E0B",
               color: "white",
               border: "none",
               padding: "0.75rem 2rem",
@@ -256,7 +264,7 @@ export const PostJob = () => {
             type="button"
             onClick={() => navigate("/jobs")}
             style={{
-              backgroundColor: "#6c757d",
+              backgroundColor: "#1E3A8A",
               color: "white",
               border: "none",
               padding: "0.75rem 2rem",
@@ -264,6 +272,8 @@ export const PostJob = () => {
               cursor: "pointer",
               fontSize: "16px",
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
           >
             Cancel
           </button>
@@ -274,4 +284,5 @@ export const PostJob = () => {
 };
 
 export default PostJob;
+
 

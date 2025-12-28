@@ -40,13 +40,13 @@ export const Home = () => {
   return (
     <>
       <div style={{ padding: "20px" }}>
-        <h1>Welcome, {user.name || user.email}!</h1>
+        <h1 style={{ color: "#0F172A" }}>Welcome, {user.name || user.email}!</h1>
 
-        {error && <div style={{ color: "red", padding: "10px" }}>{error}</div>}
+        {error && <div style={{ color: "#721c24", backgroundColor: "#f8d7da", padding: "10px", borderRadius: "5px", marginBottom: "1rem" }}>{error}</div>}
         {isPhotographer && (
-          <div>
-            <h2>Photographer Dashboard</h2>
-            <p>Welcome to your photographer dashboard! Here you can:</p>
+          <div style={{ backgroundColor: "#FFFFFF", padding: "2rem", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", marginTop: "1rem" }}>
+            <h2 style={{ color: "#0F172A" }}>Photographer Dashboard</h2>
+            <p style={{ color: "#475569" }}>Welcome to your photographer dashboard! Here you can:</p>
             <ul>
               <li>View and manage your job applications</li>
               <li>Browse available jobs</li>
@@ -58,7 +58,7 @@ export const Home = () => {
                 onClick={() => navigate("/jobs")}
                 style={{
                   padding: "10px 20px",
-                  backgroundColor: "#007bff",
+                  backgroundColor: "#1E3A8A",
                   color: "white",
                   border: "none",
                   borderRadius: "5px",
@@ -66,17 +66,52 @@ export const Home = () => {
                   marginRight: "10px",
                   fontSize: "16px"
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
               >
                 Browse Available Jobs
+              </button>
+              <button 
+                onClick={() => navigate("/my-bids")}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#1E3A8A",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  marginRight: "10px",
+                  fontSize: "16px"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
+              >
+                My Bids
+              </button>
+              <button 
+                onClick={() => navigate("/portfolio")}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#1E3A8A",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  fontSize: "16px"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
+              >
+                Portfolio
               </button>
             </div>
           </div>
         )}
 
         {isCustomer && (
-          <div>
-            <h2>Customer Dashboard</h2>
-            <p>Welcome to your customer dashboard! Here you can:</p>
+          <div style={{ backgroundColor: "#FFFFFF", padding: "2rem", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", marginTop: "1rem" }}>
+            <h2 style={{ color: "#0F172A" }}>Customer Dashboard</h2>
+            <p style={{ color: "#475569" }}>Welcome to your customer dashboard! Here you can:</p>
             <ul>
               <li>Post new job listings</li>
               <li>View your posted jobs</li>
@@ -88,7 +123,7 @@ export const Home = () => {
                 onClick={() => navigate("/jobs")}
                 style={{
                   padding: "10px 20px",
-                  backgroundColor: "#28a745",
+                  backgroundColor: "#1E3A8A",
                   color: "white",
                   border: "none",
                   borderRadius: "5px",
@@ -96,6 +131,8 @@ export const Home = () => {
                   marginRight: "10px",
                   fontSize: "16px"
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
               >
                 View My Jobs
               </button>
@@ -103,15 +140,33 @@ export const Home = () => {
                 onClick={() => navigate("/post-job")}
                 style={{
                   padding: "10px 20px",
-                  backgroundColor: "#007bff",
+                  backgroundColor: "#F59E0B",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  marginRight: "10px",
+                  fontSize: "16px",
+                  fontWeight: "600"
+                }}
+              >
+                Post New Job
+              </button>
+              <button 
+                onClick={() => navigate("/view-bids")}
+                style={{
+                  padding: "10px 20px",
+                  backgroundColor: "#1E3A8A",
                   color: "white",
                   border: "none",
                   borderRadius: "5px",
                   cursor: "pointer",
                   fontSize: "16px"
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
               >
-                Post New Job
+                View Bids
               </button>
             </div>
           </div>
@@ -125,8 +180,8 @@ export const Home = () => {
         )}
 
         {answer && (
-          <div style={{ marginTop: "20px", padding: "10px", backgroundColor: "#f0f0f0", borderRadius: "5px" }}>
-            <p>Backend connection: {answer}</p>
+          <div style={{ marginTop: "20px", padding: "10px", backgroundColor: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "5px" }}>
+            <p style={{ color: "#475569" }}>Backend connection: {answer}</p>
           </div>
         )}
       </div>
