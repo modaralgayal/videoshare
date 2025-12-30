@@ -41,7 +41,8 @@ export const Jobs = () => {
       : jobs;
 
   return (
-    <div style={{ maxWidth: "900px", margin: "2rem auto", padding: "0 1rem" }}>
+    <div style={{ width: "100%", maxWidth: "100%", padding: "2rem", margin: 0 }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
       <h2 style={{ color: "#0F172A" }}>{headingText}</h2>
 
       {loading && <p style={{ color: "#475569" }}>Loading jobs...</p>}
@@ -124,6 +125,7 @@ export const Jobs = () => {
         ))}
       </ul>
       )}
+      </div>
     </div>
   );
 };

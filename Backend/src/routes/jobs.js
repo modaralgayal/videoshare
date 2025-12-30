@@ -181,9 +181,15 @@ router.get("/api/bids", authenticateToken, async (req, res) => {
       customerJobIds.has(bid.jobId)
     );
 
-    // Enrich bids with job information
+    // Enrich bids with job and photographer information
     const bidsWithJobs = customerBids.map((bid) => {
       const job = jobs.find((j) => (j.id || j.jobId) === bid.jobId);
+      
+      // Find photographer profile picture
+      const photographerProfile = allItems.find(
+        (item) => item.id === `profile_${bid.videographerId}` && item.photographerId === bid.videographerId
+      );
+      
       return {
         ...bid,
         job: job
@@ -196,6 +202,11 @@ router.get("/api/bids", authenticateToken, async (req, res) => {
               status: job.status,
             }
           : null,
+        photographer: {
+          id: bid.videographerId,
+          name: photographerProfile?.name || "Photographer",
+          profilePicture: photographerProfile?.profilePicture || null,
+        },
       };
     });
 
@@ -405,6 +416,107 @@ router.put("/api/portfolio", authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error("Error saving portfolio:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update photographer profile picture
+router.put("/api/profile-picture", authenticateToken, async (req, res) => {
+  try {
+    // Authorization: Only photographers can update their profile picture
+    if (req.user.userType !== "photographer") {
+      return res.status(403).json({ error: "Only photographers can update their profile picture" });
+    }
+
+    const photographerId = req.user.uid;
+    const { profilePicture } = req.body;
+
+    // Validate profile picture - can be a URL or base64 data URL
+    if (profilePicture && typeof profilePicture === "string" && profilePicture.trim()) {
+      const trimmedPicture = profilePicture.trim();
+      // Check if it's a base64 data URL (starts with data:image/)
+      const isBase64 = trimmedPicture.startsWith("data:image/");
+      // Check if it's a regular URL
+      const isUrl = trimmedPicture.startsWith("http://") || trimmedPicture.startsWith("https://");
+      
+      if (!isBase64 && !isUrl) {
+        return res.status(400).json({ error: "Profile picture must be a valid URL or image data" });
+      }
+      
+      // Validate base64 data URL format
+      if (isBase64) {
+        // Check if it's a valid data URL format: data:image/[type];base64,[data]
+        const base64Pattern = /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+        if (!base64Pattern.test(trimmedPicture)) {
+          return res.status(400).json({ error: "Invalid image data format. Please use JPEG, PNG, or WebP." });
+        }
+        
+        // Check base64 data size (approximate, base64 is ~33% larger than original)
+        // Limit to ~2.5MB base64 to account for ~2MB original file
+        const maxBase64Size = 2.5 * 1024 * 1024;
+        if (trimmedPicture.length > maxBase64Size) {
+          return res.status(400).json({ error: "Image size must be less than 2MB" });
+        }
+      }
+    }
+
+    // Create or update profile object with name from JWT
+    const profile = {
+      id: `profile_${photographerId}`,
+      photographerId: photographerId,
+      name: req.user.name || "Photographer",
+      profilePicture: profilePicture ? profilePicture.trim() : "",
+      updatedAt: new Date().toISOString(),
+    };
+
+    await ddb.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: profile,
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Profile picture updated successfully",
+      profilePicture: profile.profilePicture,
+    });
+  } catch (error) {
+    console.error("Error updating profile picture:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get photographer profile picture
+router.get("/api/profile-picture", authenticateToken, async (req, res) => {
+  try {
+    // Authorization: Only photographers can view their own profile picture
+    if (req.user.userType !== "photographer") {
+      return res.status(403).json({ error: "Only photographers can view their profile picture" });
+    }
+
+    const photographerId = req.user.uid;
+
+    // Scan all items from the table
+    const result = await ddb.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+      })
+    );
+
+    const allItems = result.Items || [];
+
+    // Find profile for this photographer
+    const profile = allItems.find(
+      (item) => item.id === `profile_${photographerId}` && item.photographerId === photographerId
+    );
+
+    res.status(200).json({
+      success: true,
+      profilePicture: profile?.profilePicture || "",
+    });
+  } catch (error) {
+    console.error("Error fetching profile picture:", error);
     res.status(500).json({ error: error.message });
   }
 });

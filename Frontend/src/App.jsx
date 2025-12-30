@@ -12,6 +12,7 @@ import MyBids from "./pages/MyBids";
 import Portfolio from "./pages/Portfolio";
 import ViewPhotographerPortfolio from "./pages/ViewPhotographerPortfolio";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 
 function App() {
   const [answer, setAnswer] = useState("No answer");
@@ -30,13 +31,27 @@ function App() {
       });
   }, []);
 
-  // Don't show navbar on sign-in page
-  const showNavbar = location.pathname !== "/signin";
 
   return (
-    <>
-      {showNavbar && <Navbar />}
-      <div style={{ paddingTop: showNavbar ? "73px" : "0" }}>
+    <div style={{ 
+      minHeight: "100vh", 
+      display: "flex", 
+      flexDirection: "column",
+      width: "100%",
+      maxWidth: "100%",
+      margin: 0,
+      padding: 0,
+    }}>
+      <Navbar />
+      <div 
+        className={location.pathname === "/signin" ? "signin-page-wrapper" : ""}
+        style={{ 
+          paddingTop: location.pathname === "/signin" ? "0" : "73px",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         <Routes>
         <Route path="/signin" element={<SignIn />} />
         <Route path="/" element={<Home />} />
@@ -49,7 +64,8 @@ function App() {
         <Route path="/photographer/:photographerId/portfolio" element={<ViewPhotographerPortfolio />} />
         </Routes>
       </div>
-    </>
+      <Footer />
+    </div>
   );
 }
 

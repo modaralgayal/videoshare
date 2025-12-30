@@ -22,12 +22,21 @@ a:hover {
   color: #535bf2;
 }
 
+html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
 body {
   margin: 0;
   padding: 0;
   min-width: 320px;
   min-height: 100vh;
   background-color: #ffffff;
+  width: 100%;
+  max-width: 100%;
 }
 
 * {

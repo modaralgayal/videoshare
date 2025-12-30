@@ -2,18 +2,15 @@ import { useNavigate } from "react-router-dom";
 import { getUser, logout, isAuthenticated } from "../controllers/user";
 import { signOut } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
+import logo from "../assets/kuvauspalvelut-logo.png";
 
 export const Navbar = () => {
   const navigate = useNavigate();
   const user = getUser();
   const authenticated = isAuthenticated();
 
-  if (!authenticated || !user) {
-    return null;
-  }
-
-  const isPhotographer = user.userType === "photographer";
-  const isCustomer = user.userType === "customer";
+  const isPhotographer = authenticated && user?.userType === "photographer";
+  const isCustomer = authenticated && user?.userType === "customer";
 
   const handleLogout = async () => {
     try {
@@ -45,12 +42,34 @@ export const Navbar = () => {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
-        <h2
-          style={{ margin: 0, cursor: "pointer" }}
-          onClick={() => navigate("/")}
+        <a
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("/");
+          }}
+          style={{
+            display: "inline-block",
+            padding: "0.5rem",
+            backgroundColor: "white",
+            borderRadius: "8px",
+            textDecoration: "none",
+            transition: "opacity 0.2s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
         >
-          Kuvauspalvelut
-        </h2>
+          <img
+            src={logo}
+            alt="Kuvauspalvelut"
+            style={{
+              height: "40px",
+              cursor: "pointer",
+              objectFit: "contain",
+              display: "block",
+            }}
+          />
+        </a>
 
         {isCustomer && (
           <div style={{ display: "flex", gap: "1rem" }}>
@@ -178,23 +197,27 @@ export const Navbar = () => {
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-        <span style={{ fontSize: "14px" }}>
-          {user.name || user.email}
-        </span>
-        <button
-          onClick={handleLogout}
-          style={{
-            backgroundColor: "transparent",
-            color: "white",
-            border: "1px solid white",
-            padding: "0.5rem 1rem",
-            borderRadius: "5px",
-            cursor: "pointer",
-            fontSize: "14px",
-          }}
-        >
-          Logout
-        </button>
+        {authenticated && user && (
+          <>
+            <span style={{ fontSize: "14px" }}>
+              {user.name || user.email}
+            </span>
+            <button
+              onClick={handleLogout}
+              style={{
+                backgroundColor: "transparent",
+                color: "white",
+                border: "1px solid white",
+                padding: "0.5rem 1rem",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+            >
+              Logout
+            </button>
+          </>
+        )}
       </div>
     </nav>
   );
