@@ -1,5 +1,5 @@
 import express from "express";
-import { PutCommand, ScanCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, ScanCommand, UpdateCommand, QueryCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from "uuid";
 import { ddb } from "../client/dynamodb.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -48,6 +48,7 @@ router.post("/api/job", authenticateToken, async (req, res) => {
     const job = {
       id: id,
       jobId: id,
+      entryType: "job",
       customerId: customerId, // From JWT, not request body
       title: title.trim(),
       description: description.trim(),
@@ -73,11 +74,19 @@ router.post("/api/job", authenticateToken, async (req, res) => {
 });
 
 // Get all jobs (authenticated users)
+
+
+//--------------- USE GSI HERE ----------------//
 router.get("/api/jobs", authenticateToken, async (req, res) => {
   try {
     const result = await ddb.send(
-      new ScanCommand({
-        TableName: TABLE_NAME,
+      new QueryCommand({
+        TableName: TABLE_NAME, 
+        IndexName: "entryType-index", 
+        KeyConditionExpression: "entryType = :entryType",
+        ExpressionAttributeValues: {
+          ":entryType": "job"
+        }
       })
     );
 
@@ -124,6 +133,7 @@ router.post("/api/bid", authenticateToken, async (req, res) => {
     const bid = {
       id: id,
       bidId: id,
+      entryType: "bid",
       jobId: jobId.trim(),
       videographerId: videographerId, // From JWT, not request body
       price: bidPrice,
@@ -160,18 +170,35 @@ router.get("/api/bids", authenticateToken, async (req, res) => {
     // Use customerId from JWT, not from URL params (security)
     const customerId = req.user.uid;
 
-    // Scan all items from the table
-    const result = await ddb.send(
-      new ScanCommand({
+    // Query bids using GSI
+    const bidsResult = await ddb.send(
+      new QueryCommand({
         TableName: TABLE_NAME,
+        IndexName: "entryType-index",
+        KeyConditionExpression: "entryType = :entryType",
+        ExpressionAttributeValues: {
+          ":entryType": "bid"
+        }
       })
     );
 
-    const allItems = result.Items || [];
+    const allBids = bidsResult.Items || [];
 
-    // Separate jobs and bids
-    const jobs = allItems.filter((item) => item.customerId === customerId);
-    const allBids = allItems.filter((item) => item.bidId);
+    // Query jobs using GSI to get customer's jobs
+    const jobsResult = await ddb.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: "entryType-index",
+        KeyConditionExpression: "entryType = :entryType",
+        FilterExpression: "customerId = :customerId",
+        ExpressionAttributeValues: {
+          ":entryType": "job",
+          ":customerId": customerId
+        }
+      })
+    );
+
+    const jobs = jobsResult.Items || [];
 
     // Get job IDs that belong to this customer
     const customerJobIds = new Set(jobs.map((job) => job.id || job.jobId));
@@ -181,13 +208,29 @@ router.get("/api/bids", authenticateToken, async (req, res) => {
       customerJobIds.has(bid.jobId)
     );
 
+    // Get photographer profiles for all unique videographer IDs
+    const videographerIds = [...new Set(customerBids.map((bid) => bid.videographerId))];
+    const profileResults = await Promise.all(
+      videographerIds.map((vid) =>
+        ddb.send(
+          new GetCommand({
+            TableName: TABLE_NAME,
+            Key: {
+              id: `profile_${vid}`
+            }
+          })
+        ).catch(() => ({ Item: null }))
+      )
+    );
+    const profiles = profileResults.map((result) => result.Item).filter(Boolean);
+
     // Enrich bids with job and photographer information
     const bidsWithJobs = customerBids.map((bid) => {
       const job = jobs.find((j) => (j.id || j.jobId) === bid.jobId);
       
       // Find photographer profile picture
-      const photographerProfile = allItems.find(
-        (item) => item.id === `profile_${bid.videographerId}` && item.photographerId === bid.videographerId
+      const photographerProfile = profiles.find(
+        (item) => item.photographerId === bid.videographerId
       );
       
       return {
@@ -395,6 +438,7 @@ router.put("/api/portfolio", authenticateToken, async (req, res) => {
 
     // Create portfolio object
     const portfolio = {
+      entryType: "Portfolio",
       id: `portfolio_${photographerId}`,
       photographerId: photographerId,
       description: description || "",

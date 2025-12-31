@@ -78,8 +78,7 @@ export const MakeBid = () => {
   };
 
   return (
-    <div style={{ width: "100%", maxWidth: "100%", padding: "2rem", margin: 0 }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
+    <div style={{ maxWidth: "800px", margin: "2rem auto", padding: "0 1rem" }}>
       <h1 style={{ color: "#0F172A" }}>Make a Bid</h1>
 
       {/* Job Information */}
@@ -246,7 +245,6 @@ export const MakeBid = () => {
           </button>
         </div>
       </form>
-      </div>
     </div>
   );
 };

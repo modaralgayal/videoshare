@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUser, isAuthenticated } from "../controllers/user";
-import { savePortfolio, fetchPhotographerPortfolio, updateProfilePicture, getProfilePicture } from "../controllers/portfolio";
+import { savePortfolio, fetchPhotographerPortfolio } from "../controllers/portfolio";
 
 export const Portfolio = () => {
   const navigate = useNavigate();
@@ -12,9 +12,6 @@ export const Portfolio = () => {
   const [description, setDescription] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [descriptionError, setDescriptionError] = useState("");
-  const [profilePicture, setProfilePicture] = useState("");
-  const [isEditingProfilePicture, setIsEditingProfilePicture] = useState(false);
-  const [profilePictureError, setProfilePictureError] = useState("");
 
   // Redirect if not authenticated or not a photographer
   useEffect(() => {
@@ -32,15 +29,6 @@ export const Portfolio = () => {
           const portfolioData = await fetchPhotographerPortfolio(user.uid);
           setDescription(portfolioData.description || "");
           setPortfolioItems(portfolioData.items || []);
-          
-          // Load profile picture
-          try {
-            const pictureUrl = await getProfilePicture();
-            setProfilePicture(pictureUrl || "");
-          } catch (err) {
-            console.error("Error loading profile picture:", err);
-            setProfilePicture("");
-          }
         } catch (err) {
           console.error("Error loading portfolio:", err);
           // If error, start with empty portfolio
@@ -86,66 +74,6 @@ export const Portfolio = () => {
     setDescriptionError("");
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) {
-      setProfilePicture("");
-      setProfilePictureError("");
-      return;
-    }
-
-    // Validate file type
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      setProfilePictureError("Please select a valid image file (JPEG, PNG, or WebP)");
-      return;
-    }
-
-    // Validate file size (max 2MB)
-    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
-    if (file.size > maxSize) {
-      setProfilePictureError("Image size must be less than 2MB. Please compress your image.");
-      return;
-    }
-
-    // Convert file to base64 data URL
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setProfilePicture(event.target.result);
-      setProfilePictureError("");
-    };
-    reader.onerror = () => {
-      setProfilePictureError("Error reading file. Please try again.");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSaveProfilePicture = async () => {
-    if (!profilePicture) {
-      setProfilePictureError("Please select an image file");
-      return;
-    }
-
-    try {
-      await updateProfilePicture(profilePicture);
-      setIsEditingProfilePicture(false);
-      setProfilePictureError("");
-    } catch (err) {
-      setProfilePictureError(err.message || "Failed to save profile picture. Please try again.");
-    }
-  };
-
-  const handleCancelProfilePictureEdit = async () => {
-    try {
-      const pictureUrl = await getProfilePicture();
-      setProfilePicture(pictureUrl || "");
-    } catch (err) {
-      console.error("Error loading profile picture:", err);
-    }
-    setIsEditingProfilePicture(false);
-    setProfilePictureError("");
-  };
-
   if (!user || user.userType !== "photographer") {
     return null;
   }
@@ -169,177 +97,6 @@ export const Portfolio = () => {
         >
           Add Portfolio Item
         </button>
-      </div>
-
-      {/* Profile Picture Section */}
-      <div
-        style={{
-          backgroundColor: "#FFFFFF",
-          border: "1px solid #E2E8F0",
-          borderRadius: "8px",
-          padding: "2rem",
-          marginBottom: "2rem",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h2 style={{ color: "#0F172A", margin: 0 }}>Profile Picture</h2>
-          {!isEditingProfilePicture && (
-            <button
-              onClick={() => setIsEditingProfilePicture(true)}
-              style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: "#1E3A8A",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
-                fontSize: "14px",
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
-            >
-              {profilePicture ? "Change Picture" : "Add Picture"}
-            </button>
-          )}
-        </div>
-
-        {isEditingProfilePicture ? (
-          <div>
-            <label htmlFor="profilePicture" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "bold", color: "#0F172A" }}>
-              Profile Picture
-            </label>
-            <input
-              type="file"
-              id="profilePicture"
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              onChange={handleFileChange}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                fontSize: "16px",
-                border: profilePictureError ? "1px solid #dc3545" : "1px solid #E2E8F0",
-                borderRadius: "5px",
-                boxSizing: "border-box",
-                backgroundColor: "#FFFFFF",
-                color: "#0F172A",
-                cursor: "pointer",
-              }}
-            />
-            {profilePictureError && (
-              <p style={{ color: "#721c24", fontSize: "14px", margin: "0.5rem 0 0 0" }}>
-                {profilePictureError}
-              </p>
-            )}
-            <p style={{ color: "#475569", fontSize: "14px", margin: "0.5rem 0 1rem 0" }}>
-              Select an image file (JPEG, PNG, or WebP). Maximum file size: 2MB. This will appear next to your name when you make bids.
-            </p>
-            {profilePicture && !profilePictureError && (
-              <div style={{ marginBottom: "1rem" }}>
-                <p style={{ color: "#475569", fontSize: "14px", marginBottom: "0.5rem" }}>Preview:</p>
-                <img
-                  src={profilePicture}
-                  alt="Profile preview"
-                  style={{
-                    width: "120px",
-                    height: "120px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    border: "2px solid #E2E8F0",
-                  }}
-                />
-              </div>
-            )}
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button
-                onClick={handleSaveProfilePicture}
-                style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: "#F59E0B",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                }}
-              >
-                Save Picture
-              </button>
-              <button
-                onClick={handleCancelProfilePictureEdit}
-                style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: "transparent",
-                  color: "#475569",
-                  border: "1px solid #E2E8F0",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
-            {profilePicture ? (
-              <>
-                <img
-                  src={profilePicture}
-                  alt="Profile"
-                  style={{
-                    width: "120px",
-                    height: "120px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    border: "2px solid #E2E8F0",
-                  }}
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                    e.target.nextSibling.style.display = "flex";
-                  }}
-                />
-                <div
-                  style={{
-                    width: "120px",
-                    height: "120px",
-                    borderRadius: "50%",
-                    backgroundColor: "#F8FAFC",
-                    display: "none",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#475569",
-                    border: "2px solid #E2E8F0",
-                  }}
-                >
-                  Invalid URL
-                </div>
-              </>
-            ) : (
-              <div
-                style={{
-                  width: "120px",
-                  height: "120px",
-                  borderRadius: "50%",
-                  backgroundColor: "#F8FAFC",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#475569",
-                  border: "2px solid #E2E8F0",
-                }}
-              >
-                No Picture
-              </div>
-            )}
-            <p style={{ color: "#475569", fontSize: "14px", margin: 0 }}>
-              {profilePicture
-                ? "Your profile picture will appear next to your name when customers view your bids."
-                : "Add a profile picture to help customers recognize you. This will appear next to your name when you make bids."}
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Portfolio Description Section */}

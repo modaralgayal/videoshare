@@ -24,6 +24,10 @@ export const Navbar = () => {
     }
   };
 
+  const handleSignIn = () => {
+    navigate("/signin");
+  };
+
   return (
     <nav
       style={{
@@ -42,34 +46,16 @@ export const Navbar = () => {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
-        <a
-          href="/"
-          onClick={(e) => {
-            e.preventDefault();
-            navigate("/");
-          }}
+        <img
+          src={logo}
+          alt="Kuvauspalvelut"
+          onClick={() => navigate("/")}
           style={{
-            display: "inline-block",
-            padding: "0.5rem",
-            backgroundColor: "white",
-            borderRadius: "8px",
-            textDecoration: "none",
-            transition: "opacity 0.2s",
+            height: "40px",
+            cursor: "pointer",
+            objectFit: "contain",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-        >
-          <img
-            src={logo}
-            alt="Kuvauspalvelut"
-            style={{
-              height: "40px",
-              cursor: "pointer",
-              objectFit: "contain",
-              display: "block",
-            }}
-          />
-        </a>
+        />
 
         {isCustomer && (
           <div style={{ display: "flex", gap: "1rem" }}>
@@ -197,7 +183,7 @@ export const Navbar = () => {
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-        {authenticated && user && (
+        {authenticated && user ? (
           <>
             <span style={{ fontSize: "14px" }}>
               {user.name || user.email}
@@ -217,6 +203,24 @@ export const Navbar = () => {
               Logout
             </button>
           </>
+        ) : (
+          <button
+            onClick={handleSignIn}
+            style={{
+              backgroundColor: "#F59E0B",
+              color: "white",
+              border: "none",
+              padding: "0.5rem 1rem",
+              borderRadius: "5px",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: "600",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#D97706")}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#F59E0B")}
+          >
+            Sign In
+          </button>
         )}
       </div>
     </nav>

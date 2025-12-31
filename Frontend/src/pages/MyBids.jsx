@@ -45,8 +45,7 @@ export const MyBids = () => {
   }
 
   return (
-    <div style={{ width: "100%", maxWidth: "100%", padding: "2rem", margin: 0 }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
+    <div style={{ maxWidth: "1000px", margin: "2rem auto", padding: "0 1rem" }}>
       <h1 style={{ color: "#0F172A" }}>My Bids</h1>
 
       {loading && <p style={{ color: "#475569" }}>Loading bids...</p>}
@@ -195,7 +194,6 @@ export const MyBids = () => {
           ))}
         </div>
       )}
-      </div>
     </div>
   );
 };

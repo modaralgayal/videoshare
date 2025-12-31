@@ -55,8 +55,7 @@ export const ViewBids = () => {
   }
 
   return (
-    <div style={{ width: "100%", maxWidth: "100%", padding: "2rem", margin: 0 }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
+    <div style={{ maxWidth: "1000px", margin: "2rem auto", padding: "0 1rem" }}>
       <h1 style={{ color: "#0F172A" }}>Bids Received</h1>
 
       {loading && <p style={{ color: "#475569" }}>Loading bids...</p>}
@@ -145,66 +144,6 @@ export const ViewBids = () => {
 
               {/* Bid Information */}
               <div>
-                {/* Photographer Info */}
-                {bid.photographer && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "1rem",
-                      marginBottom: "1.5rem",
-                      padding: "1rem",
-                      backgroundColor: "#F8FAFC",
-                      borderRadius: "8px",
-                      border: "1px solid #E2E8F0",
-                    }}
-                  >
-                    {bid.photographer.profilePicture ? (
-                      <img
-                        src={bid.photographer.profilePicture}
-                        alt={bid.photographer.name}
-                        style={{
-                          width: "60px",
-                          height: "60px",
-                          borderRadius: "50%",
-                          objectFit: "cover",
-                          border: "2px solid #E2E8F0",
-                        }}
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                          if (e.target.nextSibling) {
-                            e.target.nextSibling.style.display = "flex";
-                          }
-                        }}
-                      />
-                    ) : null}
-                    <div
-                      style={{
-                        width: "60px",
-                        height: "60px",
-                        borderRadius: "50%",
-                        backgroundColor: "#E2E8F0",
-                        display: bid.photographer.profilePicture ? "none" : "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "#475569",
-                        fontSize: "24px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {bid.photographer.name ? bid.photographer.name.charAt(0).toUpperCase() : "P"}
-                    </div>
-                    <div>
-                      <h4 style={{ margin: 0, color: "#0F172A", fontSize: "18px" }}>
-                        {bid.photographer.name || "Photographer"}
-                      </h4>
-                      <p style={{ margin: "0.25rem 0 0 0", color: "#475569", fontSize: "14px" }}>
-                        Photographer
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
                 <div
                   style={{
                     display: "flex",
@@ -332,7 +271,6 @@ export const ViewBids = () => {
           ))}
         </div>
       )}
-      </div>
     </div>
   );
 };

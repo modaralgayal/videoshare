@@ -103,8 +103,7 @@ export const PostJob = () => {
   };
 
   return (
-    <div style={{ width: "100%", maxWidth: "100%", padding: "2rem", margin: 0 }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
+    <div style={{ maxWidth: "800px", margin: "2rem auto", padding: "0 1rem" }}>
       <h1 style={{ color: "#0F172A" }}>Post a New Job</h1>
 
       {error && (
@@ -280,7 +279,6 @@ export const PostJob = () => {
           </button>
         </div>
       </form>
-      </div>
     </div>
   );
 };

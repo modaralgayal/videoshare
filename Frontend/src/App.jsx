@@ -46,7 +46,7 @@ function App() {
       <div 
         className={location.pathname === "/signin" ? "signin-page-wrapper" : ""}
         style={{ 
-          paddingTop: location.pathname === "/signin" ? "0" : "73px",
+          paddingTop: "73px",
           flex: 1,
           display: "flex",
           flexDirection: "column",

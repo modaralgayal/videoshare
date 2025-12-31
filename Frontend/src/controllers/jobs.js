@@ -5,7 +5,7 @@ export const postJob = async (job) => {
   try {
     // Use apiClient which automatically includes JWT token
     // Note: customerId is now set on backend from JWT, so we don't need to send it
-    const { customerId, ...jobData } = job;
+    const { ...jobData } = job;
     const response = await apiClient.post(`${API_URL}/api/job`, jobData);
 
     if (response.data.success) {
