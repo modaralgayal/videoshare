@@ -1,5 +1,5 @@
 import express from "express";
-import { PutCommand, ScanCommand, UpdateCommand, QueryCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, UpdateCommand, QueryCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from "uuid";
 import { ddb } from "../client/dynamodb.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -281,30 +281,45 @@ router.patch("/api/bids/:bidId", authenticateToken, async (req, res) => {
 
     const customerId = req.user.uid;
 
-    // First, scan to get the bid and verify ownership
-    const scanResult = await ddb.send(
-      new ScanCommand({
+    // Query bids using GSI, then filter in code to find the specific bid
+    const bidsResult = await ddb.send(
+      new QueryCommand({
         TableName: TABLE_NAME,
+        IndexName: "entryType-index",
+        KeyConditionExpression: "entryType = :entryType",
+        ExpressionAttributeValues: {
+          ":entryType": "bid"
+        }
       })
     );
 
-    const allItems = scanResult.Items || [];
-    
-    // Find the bid
-    const bid = allItems.find((item) => (item.id === bidId || item.bidId === bidId) && item.bidId);
+    const bid = bidsResult.Items?.find((item) => (item.id === bidId || item.bidId === bidId));
     
     if (!bid) {
       return res.status(404).json({ error: "Bid not found" });
     }
 
-    // Find the job this bid belongs to
-    const job = allItems.find((item) => (item.id === bid.jobId || item.jobId === bid.jobId) && item.customerId);
+    // Query jobs using GSI to find the job this bid belongs to
+    const jobsResult = await ddb.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: "entryType-index",
+        KeyConditionExpression: "entryType = :entryType",
+        FilterExpression: "customerId = :customerId",
+        ExpressionAttributeValues: {
+          ":entryType": "job",
+          ":customerId": customerId
+        }
+      })
+    );
+
+    const job = jobsResult.Items?.find((item) => (item.id === bid.jobId || item.jobId === bid.jobId));
 
     if (!job) {
       return res.status(404).json({ error: "Job not found" });
     }
 
-    // Authorization: Verify the job belongs to this customer
+    // Authorization: Verify the job belongs to this customer (already filtered, but double-check)
     if (job.customerId !== customerId) {
       return res.status(403).json({ error: "You can only update bids for your own jobs" });
     }
@@ -333,8 +348,26 @@ router.patch("/api/bids/:bidId", authenticateToken, async (req, res) => {
         (item) => item.bidId && (item.id !== bidId && item.bidId !== bidId) && item.jobId === bid.jobId
       );
 
+      // Query all bids for this job and reject pending ones (excluding current bid)
+      const otherBidsResult = await ddb.send(
+        new QueryCommand({
+          TableName: TABLE_NAME,
+          IndexName: "entryType-index",
+          KeyConditionExpression: "entryType = :entryType",
+          FilterExpression: "jobId = :jobId",
+          ExpressionAttributeValues: {
+            ":entryType": "bid",
+            ":jobId": bid.jobId
+          }
+        })
+      );
+
+      const otherBidsForJob = (otherBidsResult.Items || []).filter(
+        (item) => item.id !== bidId && item.bidId !== bidId
+      );
+
       // Reject other pending bids for the same job
-      for (const otherBid of allBidsForJob) {
+      for (const otherBid of otherBidsForJob) {
         if (otherBid.status === "pending") {
           await ddb.send(
             new UpdateCommand({
@@ -375,22 +408,40 @@ router.get("/api/my-bids", authenticateToken, async (req, res) => {
 
     const videographerId = req.user.uid;
 
-    // Scan all items from the table
-    const result = await ddb.send(
-      new ScanCommand({
+    // Query bids using GSI filtered by videographerId
+    const bidsResult = await ddb.send(
+      new QueryCommand({
         TableName: TABLE_NAME,
+        IndexName: "entryType-index",
+        KeyConditionExpression: "entryType = :entryType",
+        FilterExpression: "videographerId = :videographerId",
+        ExpressionAttributeValues: {
+          ":entryType": "bid",
+          ":videographerId": videographerId
+        }
       })
     );
 
-    const allItems = result.Items || [];
+    const photographerBids = bidsResult.Items || [];
 
-    // Get all bids for this photographer
-    const photographerBids = allItems.filter(
-      (item) => item.bidId && item.videographerId === videographerId
+    // Get unique job IDs from bids
+    const jobIds = [...new Set(photographerBids.map((bid) => bid.jobId).filter(Boolean))];
+
+    // Query all jobs, then filter by job IDs in code
+    const jobsResult = await ddb.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: "entryType-index",
+        KeyConditionExpression: "entryType = :entryType",
+        ExpressionAttributeValues: {
+          ":entryType": "job"
+        }
+      })
     );
 
-    // Get all jobs
-    const allJobs = allItems.filter((item) => item.customerId);
+    const allJobs = (jobsResult.Items || []).filter((job) => 
+      jobIds.includes(job.id) || jobIds.includes(job.jobId)
+    );
 
     // Enrich bids with job information
     const bidsWithJobs = photographerBids.map((bid) => {
@@ -541,19 +592,17 @@ router.get("/api/profile-picture", authenticateToken, async (req, res) => {
 
     const photographerId = req.user.uid;
 
-    // Scan all items from the table
+    // Use GetCommand to fetch profile by id (more efficient than query)
     const result = await ddb.send(
-      new ScanCommand({
+      new GetCommand({
         TableName: TABLE_NAME,
+        Key: {
+          id: `profile_${photographerId}`
+        }
       })
     );
 
-    const allItems = result.Items || [];
-
-    // Find profile for this photographer
-    const profile = allItems.find(
-      (item) => item.id === `profile_${photographerId}` && item.photographerId === photographerId
-    );
+    const profile = result.Item;
 
     res.status(200).json({
       success: true,
@@ -571,19 +620,17 @@ router.get("/api/portfolio/:photographerId", authenticateToken, async (req, res)
     const { photographerId } = req.params;
     const currentUser = req.user;
 
-    // Scan all items from the table
+    // Use GetCommand to fetch portfolio by id (more efficient than query)
     const result = await ddb.send(
-      new ScanCommand({
+      new GetCommand({
         TableName: TABLE_NAME,
+        Key: {
+          id: `portfolio_${photographerId}`
+        }
       })
     );
 
-    const allItems = result.Items || [];
-
-    // Find portfolio for this photographer (look for items with portfolio id prefix)
-    const portfolio = allItems.find(
-      (item) => item.id === `portfolio_${photographerId}` && item.photographerId === photographerId
-    );
+    const portfolio = result.Item;
 
     if (!portfolio) {
       return res.status(200).json({
