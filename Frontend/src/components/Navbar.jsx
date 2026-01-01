@@ -46,16 +46,34 @@ export const Navbar = () => {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
-        <img
-          src={logo}
-          alt="Kuvauspalvelut"
-          onClick={() => navigate("/")}
-          style={{
-            height: "40px",
-            cursor: "pointer",
-            objectFit: "contain",
+        <a
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("/");
           }}
-        />
+          style={{
+            padding: "0.5rem",
+            backgroundColor: "white",
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "background-color 0.2s ease-in-out",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#F0F0F0"}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
+        >
+          <img
+            src={logo}
+            alt="Kuvauspalvelut"
+            style={{
+              height: "40px",
+              cursor: "pointer",
+              objectFit: "contain",
+            }}
+          />
+        </a>
 
         {isCustomer && (
           <div style={{ display: "flex", gap: "1rem" }}>

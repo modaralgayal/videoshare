@@ -124,41 +124,201 @@ export const ViewPhotographerPortfolio = () => {
                 marginTop: portfolio.description ? "0" : "2rem",
               }}
             >
-              {portfolio.items.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: "8px",
-                    overflow: "hidden",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                  }}
-                >
-                  {/* Image placeholder */}
+              {portfolio.items.map((item) => {
+                const media = item.media?.[0];
+                if (!media) return null;
+
+                const isImage = media.type === "image";
+                const isVideo = media.type === "video";
+
+                return (
                   <div
+                    key={item.id}
                     style={{
-                      width: "100%",
-                      height: "200px",
-                      backgroundColor: "#F8FAFC",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#475569",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      cursor: "pointer",
+                    }}
+                    onClick={(e) => {
+                      // Open media in modal (similar to Portfolio.jsx)
+                      const modal = document.createElement('div');
+                      Object.assign(modal.style, {
+                        position: 'fixed',
+                        top: '0',
+                        left: '0',
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: '10000',
+                        cursor: 'pointer',
+                        padding: '2rem',
+                        boxSizing: 'border-box',
+                      });
+
+                      const closeBtn = document.createElement('button');
+                      closeBtn.innerHTML = '✕';
+                      Object.assign(closeBtn.style, {
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem',
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        color: 'white',
+                        border: 'none',
+                        fontSize: '24px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: '10001',
+                        transition: 'background-color 0.2s',
+                      });
+                      closeBtn.onmouseenter = () => {
+                        closeBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                      };
+                      closeBtn.onmouseleave = () => {
+                        closeBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                      };
+
+                      const closeModal = () => {
+                        if (document.body.contains(modal)) {
+                          document.body.removeChild(modal);
+                          document.body.style.overflow = '';
+                        }
+                      };
+
+                      closeBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        closeModal();
+                      };
+
+                      modal.appendChild(closeBtn);
+
+                      if (isImage) {
+                        const imgElement = document.createElement('img');
+                        imgElement.src = media.url;
+                        imgElement.alt = media.filename || 'Portfolio image';
+                        Object.assign(imgElement.style, {
+                          maxWidth: '90%',
+                          maxHeight: '90%',
+                          width: 'auto',
+                          height: 'auto',
+                          objectFit: 'contain',
+                          cursor: 'default',
+                        });
+                        imgElement.onclick = (e) => e.stopPropagation();
+                        modal.appendChild(imgElement);
+                      } else if (isVideo) {
+                        const videoElement = document.createElement('video');
+                        videoElement.src = media.url;
+                        videoElement.controls = true;
+                        videoElement.autoplay = true;
+                        Object.assign(videoElement.style, {
+                          maxWidth: '90%',
+                          maxHeight: '90%',
+                          width: 'auto',
+                          height: 'auto',
+                          cursor: 'default',
+                        });
+                        videoElement.onclick = (e) => e.stopPropagation();
+                        modal.appendChild(videoElement);
+                      }
+
+                      modal.onclick = (e) => {
+                        if (e.target === modal) {
+                          closeModal();
+                        }
+                      };
+
+                      const handleEscape = (e) => {
+                        if (e.key === 'Escape') {
+                          closeModal();
+                          document.removeEventListener('keydown', handleEscape);
+                        }
+                      };
+                      document.addEventListener('keydown', handleEscape);
+
+                      document.body.style.overflow = 'hidden';
+                      document.body.appendChild(modal);
                     }}
                   >
-                    Image Placeholder
+                    {isImage ? (
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "300px",
+                          backgroundColor: "#F8FAFC",
+                          position: "relative",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <img
+                          src={media.url}
+                          alt={media.filename || "Portfolio image"}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            e.target.parentElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #475569;">Failed to load image</div>';
+                          }}
+                        />
+                      </div>
+                    ) : isVideo ? (
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "300px",
+                          backgroundColor: "#F8FAFC",
+                          position: "relative",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <video
+                          src={media.url}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                          muted
+                          preload="metadata"
+                        />
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "50%",
+                            left: "50%",
+                            transform: "translate(-50%, -50%)",
+                            width: "50px",
+                            height: "50px",
+                            borderRadius: "50%",
+                            backgroundColor: "rgba(0, 0, 0, 0.7)",
+                            color: "white",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "24px",
+                            pointerEvents: "none",
+                          }}
+                        >
+                          ▶
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
-                  <div style={{ padding: "1rem" }}>
-                    <h3 style={{ color: "#0F172A", marginTop: 0, marginBottom: "0.5rem" }}>
-                      {item.title || "Untitled"}
-                    </h3>
-                    <p style={{ color: "#475569", fontSize: "14px" }}>
-                      {item.description || "No description"}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : !portfolio.description ? (
             <div

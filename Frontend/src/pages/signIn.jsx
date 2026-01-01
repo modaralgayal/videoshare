@@ -119,7 +119,7 @@ export const SignIn = () => {
           flex: 1,
         }}
       >
-        {/* Left Side - Features */}
+        {/* Left Side - How It Works */}
         <div>
           <h2
             style={{
@@ -129,60 +129,66 @@ export const SignIn = () => {
               marginBottom: "2rem",
             }}
           >
-            Why Choose Kuvauspalvelut?
+            How It Works
           </h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem" }}>
             <div>
               <h3
                 style={{
-                  fontSize: "1.25rem",
+                  fontSize: "1.5rem",
                   fontWeight: "600",
                   color: "#1E3A8A",
-                  marginBottom: "0.5rem",
+                  marginBottom: "1rem",
                 }}
               >
                 For Customers
               </h3>
-              <ul
+              <div
                 style={{
-                  listStyle: "none",
-                  padding: 0,
-                  margin: 0,
                   color: "#475569",
                   lineHeight: "1.8",
+                  fontSize: "16px",
                 }}
               >
-                <li style={{ marginBottom: "0.5rem" }}>✓ Post your photography needs</li>
-                <li style={{ marginBottom: "0.5rem" }}>✓ Receive competitive bids from professionals</li>
-                <li style={{ marginBottom: "0.5rem" }}>✓ Compare portfolios and reviews</li>
-                <li style={{ marginBottom: "0.5rem" }}>✓ Manage all your jobs in one place</li>
-              </ul>
+                <p style={{ marginBottom: "1rem" }}>
+                  [Placeholder text: Describe how customers can post their photography needs, 
+                  receive bids from professional photographers, compare portfolios, and manage their projects. 
+                  This content will be customized later.]
+                </p>
+                <p style={{ marginBottom: "1rem" }}>
+                  [Additional placeholder: Explain the bidding process, how to review photographer profiles, 
+                  and the benefits of using the platform for finding the perfect photographer for your event or project.]
+                </p>
+              </div>
             </div>
             <div>
               <h3
                 style={{
-                  fontSize: "1.25rem",
+                  fontSize: "1.5rem",
                   fontWeight: "600",
                   color: "#1E3A8A",
-                  marginBottom: "0.5rem",
+                  marginBottom: "1rem",
                 }}
               >
                 For Photographers
               </h3>
-              <ul
+              <div
                 style={{
-                  listStyle: "none",
-                  padding: 0,
-                  margin: 0,
                   color: "#475569",
                   lineHeight: "1.8",
+                  fontSize: "16px",
                 }}
               >
-                <li style={{ marginBottom: "0.5rem" }}>✓ Browse available photography jobs</li>
-                <li style={{ marginBottom: "0.5rem" }}>✓ Showcase your portfolio</li>
-                <li style={{ marginBottom: "0.5rem" }}>✓ Submit competitive bids</li>
-                <li style={{ marginBottom: "0.5rem" }}>✓ Grow your photography business</li>
-              </ul>
+                <p style={{ marginBottom: "1rem" }}>
+                  [Placeholder text: Describe how photographers can browse available jobs, 
+                  showcase their portfolio with images and videos, submit competitive bids, 
+                  and grow their photography business through the platform.]
+                </p>
+                <p style={{ marginBottom: "1rem" }}>
+                  [Additional placeholder: Explain the portfolio features, bidding process, 
+                  and how photographers can connect with potential clients and build their reputation.]
+                </p>
+              </div>
             </div>
           </div>
         </div>
