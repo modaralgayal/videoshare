@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUser, isAuthenticated } from "../controllers/user";
-import { savePortfolio, fetchPhotographerPortfolio } from "../controllers/portfolio";
+import { savePortfolio, fetchPhotographerPortfolio, getProfilePicture, updateProfilePicture } from "../controllers/portfolio";
 import { uploadFile } from "../utils/upload";
 
 export const Portfolio = () => {
@@ -13,12 +13,16 @@ export const Portfolio = () => {
   const [description, setDescription] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [descriptionError, setDescriptionError] = useState("");
+  const [activeTab, setActiveTab] = useState("basic"); // "basic", "delivery", "reviews"
+  const [profilePicture, setProfilePicture] = useState("");
   
   // Upload states
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef(null);
+  const profilePictureInputRef = useRef(null);
+  const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
 
   // Redirect if not authenticated or not a photographer
   useEffect(() => {
@@ -49,7 +53,20 @@ export const Portfolio = () => {
       }
     };
 
+    const loadProfilePicture = async () => {
+      if (user && user.userType === "photographer") {
+        try {
+          const pictureUrl = await getProfilePicture();
+          setProfilePicture(pictureUrl || "");
+        } catch (err) {
+          console.error("Error loading profile picture:", err);
+          setProfilePicture("");
+        }
+      }
+    };
+
     loadPortfolio();
+    loadProfilePicture();
   }, [user]);
 
   // Handle file selection and upload
@@ -57,17 +74,25 @@ export const Portfolio = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type (images only)
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      setUploadError("Invalid file type. Please upload JPEG, PNG, or WebP images only.");
+    // Validate file type (images and videos)
+    const allowedImageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const allowedVideoTypes = ["video/mp4", "video/mov", "video/webm", "video/quicktime"];
+    const isImage = allowedImageTypes.includes(file.type);
+    const isVideo = allowedVideoTypes.includes(file.type);
+
+    if (!isImage && !isVideo) {
+      setUploadError("Invalid file type. Please upload images (JPEG, PNG, WebP) or videos (MP4, MOV, WebM).");
       return;
     }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // Validate file size based on type
+    const maxImageSize = 10 * 1024 * 1024; // 10MB
+    const maxVideoSize = 500 * 1024 * 1024; // 500MB
+    const maxSize = isImage ? maxImageSize : maxVideoSize;
+    const maxSizeMB = isImage ? 10 : 500;
+
     if (file.size > maxSize) {
-      setUploadError(`File size exceeds 10MB limit. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB`);
+      setUploadError(`File size exceeds ${maxSizeMB}MB limit. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB`);
       return;
     }
 
@@ -123,6 +148,49 @@ export const Portfolio = () => {
     }
   };
 
+  // Handle profile picture upload
+  const handleProfilePictureSelect = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type (images only)
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      alert("Invalid file type. Please upload JPEG, PNG, or WebP images only.");
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      alert(`File size exceeds 2MB limit. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB`);
+      return;
+    }
+
+    setUploadingProfilePicture(true);
+
+    try {
+      // Upload file to B2
+      const mediaItem = await uploadFile(file, (progress) => {
+        // Can add progress indicator if needed
+      });
+
+      // Update profile picture with the URL
+      await updateProfilePicture(mediaItem.url);
+      setProfilePicture(mediaItem.url);
+      
+      // Reset file input
+      if (profilePictureInputRef.current) {
+        profilePictureInputRef.current.value = "";
+      }
+    } catch (err) {
+      console.error("Error uploading profile picture:", err);
+      alert(err.message || "Failed to upload profile picture. Please try again.");
+    } finally {
+      setUploadingProfilePicture(false);
+    }
+  };
+
   const handleSaveDescription = async () => {
     if (description.length > 1000) {
       setDescriptionError("Description must be 1000 characters or less");
@@ -159,37 +227,7 @@ export const Portfolio = () => {
   }
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "2rem auto", padding: "0 1rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-        <h1 style={{ color: "#0F172A" }}>My Portfolio</h1>
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept="image/jpeg,image/jpg,image/png,image/webp"
-            onChange={handleFileSelect}
-            style={{ display: "none" }}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            style={{
-              padding: "0.75rem 1.5rem",
-              backgroundColor: uploading ? "#94A3B8" : "#F59E0B",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: uploading ? "not-allowed" : "pointer",
-              fontSize: "16px",
-              fontWeight: "600",
-              opacity: uploading ? 0.7 : 1,
-            }}
-          >
-            {uploading ? `Uploading... ${Math.round(uploadProgress)}%` : "Upload Image"}
-          </button>
-        </div>
-      </div>
-
+    <div style={{ maxWidth: "1400px", margin: "2rem auto", padding: "0 2rem" }}>
       {/* Upload Error */}
       {uploadError && (
         <div
@@ -206,209 +244,533 @@ export const Portfolio = () => {
         </div>
       )}
 
-      {/* Portfolio Description Section */}
-      <div
-        style={{
-          backgroundColor: "#FFFFFF",
-          border: "1px solid #E2E8F0",
-          borderRadius: "8px",
-          padding: "2rem",
-          marginBottom: "2rem",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h2 style={{ color: "#0F172A", margin: 0 }}>About Me</h2>
-          {!isEditingDescription && (
+      {/* Two Column Layout */}
+      <div style={{ 
+        display: "grid", 
+        gridTemplateColumns: "minmax(0, 1fr) 350px", 
+        gap: "2rem",
+      }}>
+        {/* Left Column - Main Content */}
+        <div>
+          {/* Title */}
+          <h1 style={{ color: "#0F172A", fontSize: "32px", marginBottom: "2rem", fontWeight: "600" }}>
+            {user?.name || "My Portfolio"}
+          </h1>
+
+          {/* Upload Button (for photographers) */}
+          <div style={{ marginBottom: "2rem" }}>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/jpeg,image/jpg,image/png,image/webp,video/mp4,video/mov,video/webm,video/quicktime"
+              onChange={handleFileSelect}
+              style={{ display: "none" }}
+            />
             <button
-              onClick={() => setIsEditingDescription(true)}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
               style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: "#1E3A8A",
+                padding: "0.75rem 1.5rem",
+                backgroundColor: uploading ? "#94A3B8" : "#F59E0B",
                 color: "white",
                 border: "none",
                 borderRadius: "5px",
-                cursor: "pointer",
+                cursor: uploading ? "not-allowed" : "pointer",
                 fontSize: "14px",
+                fontWeight: "600",
+                opacity: uploading ? 0.7 : 1,
               }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
             >
-              {description ? "Edit Description" : "Add Description"}
+              {uploading ? `Uploading... ${Math.round(uploadProgress)}%` : "+ Upload Media"}
             </button>
-          )}
-        </div>
+          </div>
 
-        {isEditingDescription ? (
-          <div>
-            <textarea
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                setDescriptionError("");
-              }}
-              placeholder="Tell potential clients about yourself, your experience, your style, and what makes your work unique..."
-              rows={6}
-              maxLength={1000}
+          {/* Portfolio Media Grid - Images and Videos */}
+          {loading && <p style={{ color: "#475569", marginBottom: "2rem" }}>Loading portfolio...</p>}
+
+          {!loading && portfolioItems.length === 0 && (
+            <div
               style={{
-                width: "100%",
-                padding: "0.75rem",
-                fontSize: "16px",
-                border: descriptionError ? "1px solid #dc3545" : "1px solid #E2E8F0",
-                borderRadius: "5px",
-                boxSizing: "border-box",
-                fontFamily: "inherit",
+                padding: "4rem 2rem",
+                textAlign: "center",
                 backgroundColor: "#FFFFFF",
-                color: "#0F172A",
-                resize: "vertical",
+                border: "1px solid #E2E8F0",
+                borderRadius: "8px",
+                marginBottom: "2rem",
               }}
-            />
-            {descriptionError && (
-              <p style={{ color: "#721c24", fontSize: "14px", margin: "0.5rem 0 0 0" }}>
-                {descriptionError}
+            >
+              <p style={{ color: "#475569", fontSize: "18px", marginBottom: "1rem" }}>
+                Your portfolio is empty.
               </p>
-            )}
-            <p style={{ color: "#475569", fontSize: "14px", margin: "0.5rem 0 1rem 0" }}>
-              {description.length}/1000 characters
-            </p>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <p style={{ color: "#475569", marginBottom: "2rem" }}>
+                Start building your portfolio by uploading your best work.
+              </p>
+            </div>
+          )}
+
+          {!loading && portfolioItems.length > 0 && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+                gap: "0.5rem",
+                marginBottom: "2rem",
+              }}
+            >
+              {portfolioItems.map((item) => {
+                const media = item.media?.[0];
+                if (!media) return null;
+
+                const isImage = media.type === "image";
+                const isVideo = media.type === "video";
+
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      position: "relative",
+                      aspectRatio: "1",
+                      overflow: "hidden",
+                      backgroundColor: "#F8FAFC",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => {
+                      const deleteBtn = e.currentTarget.querySelector('.delete-btn');
+                      if (deleteBtn) deleteBtn.style.display = "flex";
+                      const playIcon = e.currentTarget.querySelector('.play-icon');
+                      if (playIcon && isVideo) playIcon.style.display = "flex";
+                    }}
+                    onMouseLeave={(e) => {
+                      const deleteBtn = e.currentTarget.querySelector('.delete-btn');
+                      if (deleteBtn) deleteBtn.style.display = "none";
+                      const playIcon = e.currentTarget.querySelector('.play-icon');
+                      if (playIcon) playIcon.style.display = "none";
+                    }}
+                    onClick={(e) => {
+                      // Don't open if clicking delete button
+                      if (e.target.closest('.delete-btn')) return;
+                      
+                      // Open media in modal
+                      const modal = document.createElement('div');
+                      Object.assign(modal.style, {
+                        position: 'fixed',
+                        top: '0',
+                        left: '0',
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: '10000',
+                        cursor: 'pointer',
+                        padding: '2rem',
+                        boxSizing: 'border-box',
+                      });
+
+                      // Close button
+                      const closeBtn = document.createElement('button');
+                      closeBtn.innerHTML = '✕';
+                      Object.assign(closeBtn.style, {
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem',
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        color: 'white',
+                        border: 'none',
+                        fontSize: '24px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: '10001',
+                        transition: 'background-color 0.2s',
+                      });
+                      closeBtn.onmouseenter = () => {
+                        closeBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                      };
+                      closeBtn.onmouseleave = () => {
+                        closeBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                      };
+
+                      const closeModal = () => {
+                        if (document.body.contains(modal)) {
+                          document.body.removeChild(modal);
+                          document.body.style.overflow = '';
+                        }
+                      };
+
+                      closeBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        closeModal();
+                      };
+
+                      modal.appendChild(closeBtn);
+
+                      if (isImage) {
+                        // Open image in modal
+                        const imgElement = document.createElement('img');
+                        imgElement.src = media.url;
+                        imgElement.alt = media.filename || 'Portfolio image';
+                        Object.assign(imgElement.style, {
+                          maxWidth: '90%',
+                          maxHeight: '90%',
+                          width: 'auto',
+                          height: 'auto',
+                          objectFit: 'contain',
+                          cursor: 'default',
+                        });
+                        imgElement.onclick = (e) => e.stopPropagation();
+                        modal.appendChild(imgElement);
+                      } else if (isVideo) {
+                        // Open video in modal
+                        const videoElement = document.createElement('video');
+                        videoElement.src = media.url;
+                        videoElement.controls = true;
+                        videoElement.autoplay = true;
+                        Object.assign(videoElement.style, {
+                          maxWidth: '90%',
+                          maxHeight: '90%',
+                          width: 'auto',
+                          height: 'auto',
+                          cursor: 'default',
+                        });
+                        videoElement.onclick = (e) => e.stopPropagation();
+                        modal.appendChild(videoElement);
+                      }
+
+                      // Close on background click
+                      modal.onclick = (e) => {
+                        if (e.target === modal) {
+                          closeModal();
+                        }
+                      };
+
+                      // Close on Escape key
+                      const handleEscape = (e) => {
+                        if (e.key === 'Escape') {
+                          closeModal();
+                          document.removeEventListener('keydown', handleEscape);
+                        }
+                      };
+                      document.addEventListener('keydown', handleEscape);
+
+                      // Prevent body scroll
+                      document.body.style.overflow = 'hidden';
+
+                      document.body.appendChild(modal);
+                    }}
+                  >
+                    {isImage ? (
+                      <img
+                        src={media.url}
+                        alt={media.filename || "Portfolio image"}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                        }}
+                      />
+                    ) : isVideo ? (
+                      <>
+                        <video
+                          src={media.url}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                          muted
+                          preload="metadata"
+                        />
+                        {/* Play icon overlay */}
+                        <div
+                          className="play-icon"
+                          style={{
+                            display: "none",
+                            position: "absolute",
+                            top: "50%",
+                            left: "50%",
+                            transform: "translate(-50%, -50%)",
+                            width: "50px",
+                            height: "50px",
+                            borderRadius: "50%",
+                            backgroundColor: "rgba(0, 0, 0, 0.7)",
+                            color: "white",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "24px",
+                            pointerEvents: "none",
+                          }}
+                        >
+                          ▶
+                        </div>
+                      </>
+                    ) : null}
+                    {/* Delete button overlay */}
+                    <button
+                      className="delete-btn"
+                      onClick={() => handleDeleteImage(item.id)}
+                      style={{
+                        display: "none",
+                        position: "absolute",
+                        top: "0.5rem",
+                        right: "0.5rem",
+                        padding: "0.5rem",
+                        backgroundColor: "rgba(220, 38, 38, 0.9)",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                      title="Delete media"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Tabs Section */}
+          <div style={{ marginTop: "2rem" }}>
+            {/* Tab Headers */}
+            <div style={{ display: "flex", gap: "1rem", borderBottom: "2px solid #E2E8F0", marginBottom: "1.5rem" }}>
               <button
-                onClick={handleSaveDescription}
+                onClick={() => setActiveTab("basic")}
                 style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: "#F59E0B",
-                  color: "white",
+                  padding: "0.75rem 1rem",
+                  backgroundColor: "transparent",
                   border: "none",
-                  borderRadius: "5px",
+                  borderBottom: activeTab === "basic" ? "2px solid #1E3A8A" : "2px solid transparent",
+                  color: activeTab === "basic" ? "#1E3A8A" : "#475569",
                   cursor: "pointer",
-                  fontSize: "14px",
-                  fontWeight: "600",
+                  fontSize: "16px",
+                  fontWeight: activeTab === "basic" ? "600" : "400",
+                  marginBottom: "-2px",
                 }}
               >
-                Save Description
+                Perustiedot
               </button>
               <button
-                onClick={handleCancelEdit}
+                onClick={() => setActiveTab("delivery")}
                 style={{
-                  padding: "0.5rem 1rem",
+                  padding: "0.75rem 1rem",
                   backgroundColor: "transparent",
-                  color: "#475569",
-                  border: "1px solid #E2E8F0",
-                  borderRadius: "5px",
+                  border: "none",
+                  borderBottom: activeTab === "delivery" ? "2px solid #1E3A8A" : "2px solid transparent",
+                  color: activeTab === "delivery" ? "#1E3A8A" : "#475569",
                   cursor: "pointer",
-                  fontSize: "14px",
+                  fontSize: "16px",
+                  fontWeight: activeTab === "delivery" ? "600" : "400",
+                  marginBottom: "-2px",
                 }}
               >
-                Cancel
+                Toimitus & matkakulut
+              </button>
+              <button
+                onClick={() => setActiveTab("reviews")}
+                style={{
+                  padding: "0.75rem 1rem",
+                  backgroundColor: "transparent",
+                  border: "none",
+                  borderBottom: activeTab === "reviews" ? "2px solid #1E3A8A" : "2px solid transparent",
+                  color: activeTab === "reviews" ? "#1E3A8A" : "#475569",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                  fontWeight: activeTab === "reviews" ? "600" : "400",
+                  marginBottom: "-2px",
+                }}
+              >
+                Arvostelut
               </button>
             </div>
-          </div>
-        ) : (
-          <div>
-            {description ? (
-              <p
-                style={{
-                  color: "#475569",
-                  fontSize: "16px",
-                  lineHeight: "1.6",
-                  whiteSpace: "pre-wrap",
-                  margin: 0,
-                }}
-              >
-                {description}
-              </p>
-            ) : (
-              <p
-                style={{
-                  color: "#475569",
-                  fontSize: "16px",
-                  fontStyle: "italic",
-                  margin: 0,
-                }}
-              >
-                No description added yet. Click "Add Description" to tell clients about yourself and your work.
-              </p>
-            )}
-          </div>
-        )}
-      </div>
 
-      {loading && <p style={{ color: "#475569" }}>Loading portfolio...</p>}
+            {/* Tab Content */}
+            <div>
+              {activeTab === "basic" && (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                    <h3 style={{ color: "#0F172A", margin: 0, fontSize: "20px" }}>About</h3>
+                    {!isEditingDescription && (
+                      <button
+                        onClick={() => setIsEditingDescription(true)}
+                        style={{
+                          padding: "0.5rem 1rem",
+                          backgroundColor: "#1E3A8A",
+                          color: "white",
+                          border: "none",
+                          borderRadius: "5px",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
+                      >
+                        {description ? "Edit" : "Add Description"}
+                      </button>
+                    )}
+                  </div>
 
-      {!loading && portfolioItems.length === 0 && (
-        <div
-          style={{
-            padding: "4rem 2rem",
-            textAlign: "center",
-            backgroundColor: "#FFFFFF",
-            border: "1px solid #E2E8F0",
-            borderRadius: "8px",
-          }}
-        >
-          <p style={{ color: "#475569", fontSize: "18px", marginBottom: "1rem" }}>
-            Your portfolio is empty.
-          </p>
-          <p style={{ color: "#475569", marginBottom: "2rem" }}>
-            Start building your portfolio by uploading your best work to showcase your skills to potential clients.
-          </p>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+                  {isEditingDescription ? (
+                    <div>
+                      <textarea
+                        value={description}
+                        onChange={(e) => {
+                          setDescription(e.target.value);
+                          setDescriptionError("");
+                        }}
+                        placeholder="Tell potential clients about yourself, your experience, your style, and what makes your work unique..."
+                        rows={8}
+                        maxLength={1000}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          fontSize: "16px",
+                          border: descriptionError ? "1px solid #dc3545" : "1px solid #E2E8F0",
+                          borderRadius: "5px",
+                          boxSizing: "border-box",
+                          fontFamily: "inherit",
+                          backgroundColor: "#FFFFFF",
+                          color: "#0F172A",
+                          resize: "vertical",
+                        }}
+                      />
+                      {descriptionError && (
+                        <p style={{ color: "#721c24", fontSize: "14px", margin: "0.5rem 0 0 0" }}>
+                          {descriptionError}
+                        </p>
+                      )}
+                      <p style={{ color: "#475569", fontSize: "14px", margin: "0.5rem 0 1rem 0" }}>
+                        {description.length}/1000 characters
+                      </p>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <button
+                          onClick={handleSaveDescription}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            backgroundColor: "#F59E0B",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "5px",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                            fontWeight: "600",
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            backgroundColor: "transparent",
+                            color: "#475569",
+                            border: "1px solid #E2E8F0",
+                            borderRadius: "5px",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      {description ? (
+                        <p
+                          style={{
+                            color: "#475569",
+                            fontSize: "16px",
+                            lineHeight: "1.8",
+                            whiteSpace: "pre-wrap",
+                            margin: 0,
+                          }}
+                        >
+                          {description}
+                        </p>
+                      ) : (
+                        <p
+                          style={{
+                            color: "#94A3B8",
+                            fontSize: "16px",
+                            fontStyle: "italic",
+                            margin: 0,
+                          }}
+                        >
+                          No description added yet.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "delivery" && (
+                <div>
+                  <h3 style={{ color: "#0F172A", margin: "0 0 1rem 0", fontSize: "20px" }}>Delivery & Travel Costs</h3>
+                  <p style={{ color: "#94A3B8", fontSize: "16px" }}>
+                    Information about delivery and travel costs will be displayed here.
+                  </p>
+                </div>
+              )}
+
+              {activeTab === "reviews" && (
+                <div>
+                  <h3 style={{ color: "#0F172A", margin: "0 0 1rem 0", fontSize: "20px" }}>Reviews</h3>
+                  <p style={{ color: "#94A3B8", fontSize: "16px" }}>
+                    Reviews and ratings will be displayed here.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Sidebar */}
+        <div>
+          {/* Profile Picture */}
+          <div
             style={{
-              padding: "0.75rem 1.5rem",
-              backgroundColor: uploading ? "#94A3B8" : "#F59E0B",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: uploading ? "not-allowed" : "pointer",
-              fontSize: "16px",
-              fontWeight: "600",
-              opacity: uploading ? 0.7 : 1,
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E2E8F0",
+              borderRadius: "8px",
+              padding: "1.5rem",
+              marginBottom: "1.5rem",
+              textAlign: "center",
             }}
           >
-            {uploading ? `Uploading... ${Math.round(uploadProgress)}%` : "Upload Your First Image"}
-          </button>
-        </div>
-      )}
-
-      {!loading && portfolioItems.length > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: "1.5rem",
-            marginTop: "2rem",
-          }}
-        >
-          {portfolioItems.map((item) => {
-            // Get first image from media array
-            const image = item.media?.[0];
-            if (!image || image.type !== "image") return null;
-
-            return (
+            <div style={{ position: "relative", display: "inline-block", marginBottom: "1rem" }}>
               <div
-                key={item.id}
                 style={{
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E2E8F0",
-                  borderRadius: "8px",
+                  width: "150px",
+                  height: "150px",
+                  borderRadius: "50%",
+                  backgroundColor: "#F8FAFC",
+                  margin: "0 auto",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   overflow: "hidden",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  border: "2px solid #E2E8F0",
                   position: "relative",
                 }}
               >
-                {/* Image */}
-                <div
-                  style={{
-                    width: "100%",
-                    height: "300px",
-                    backgroundColor: "#F8FAFC",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                >
+                {profilePicture ? (
                   <img
-                    src={image.url}
-                    alt={image.filename || "Portfolio image"}
+                    src={profilePicture}
+                    alt="Profile"
                     style={{
                       width: "100%",
                       height: "100%",
@@ -416,83 +778,156 @@ export const Portfolio = () => {
                     }}
                     onError={(e) => {
                       e.target.style.display = "none";
-                      e.target.parentElement.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #475569;">Failed to load image</div>';
+                      e.target.parentElement.innerHTML = '<span style="color: #94A3B8; font-size: 48px;">📷</span>';
                     }}
                   />
-                  {/* Delete button overlay */}
-                  <button
-                    onClick={() => handleDeleteImage(item.id)}
-                    style={{
-                      position: "absolute",
-                      top: "0.5rem",
-                      right: "0.5rem",
-                      padding: "0.5rem",
-                      backgroundColor: "rgba(0, 0, 0, 0.6)",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(220, 38, 38, 0.8)"}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.6)"}
-                    title="Delete image"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div style={{ padding: "1rem" }}>
-                  <p style={{ color: "#475569", fontSize: "12px", margin: 0 }}>
-                    {image.filename || "Image"}
-                  </p>
-                  {image.size && (
-                    <p style={{ color: "#94A3B8", fontSize: "11px", margin: "0.25rem 0 0 0" }}>
-                      {(image.size / (1024 * 1024)).toFixed(2)} MB
-                    </p>
-                  )}
-                </div>
+                ) : (
+                  <span style={{ color: "#94A3B8", fontSize: "48px" }}>📷</span>
+                )}
               </div>
-            );
-          })}
-        </div>
-      )}
+              <input
+                type="file"
+                ref={profilePictureInputRef}
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleProfilePictureSelect}
+                style={{ display: "none" }}
+              />
+              <button
+                onClick={() => profilePictureInputRef.current?.click()}
+                disabled={uploadingProfilePicture}
+                style={{
+                  position: "absolute",
+                  bottom: "0",
+                  right: "0",
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  backgroundColor: "#1E3A8A",
+                  color: "white",
+                  border: "3px solid white",
+                  cursor: uploadingProfilePicture ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "18px",
+                  opacity: uploadingProfilePicture ? 0.7 : 1,
+                }}
+                title="Upload profile picture"
+                onMouseEnter={(e) => {
+                  if (!uploadingProfilePicture) {
+                    e.currentTarget.style.backgroundColor = "#1D4ED8";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!uploadingProfilePicture) {
+                    e.currentTarget.style.backgroundColor = "#1E3A8A";
+                  }
+                }}
+              >
+                {uploadingProfilePicture ? "..." : "📷"}
+              </button>
+            </div>
+            <h3 style={{ color: "#0F172A", margin: "0 0 0.5rem 0", fontSize: "18px" }}>
+              {user?.name || "Photographer"}
+            </h3>
+            <button
+              onClick={() => profilePictureInputRef.current?.click()}
+              disabled={uploadingProfilePicture}
+              style={{
+                padding: "0.5rem 1rem",
+                backgroundColor: "transparent",
+                color: "#475569",
+                border: "1px solid #E2E8F0",
+                borderRadius: "5px",
+                cursor: uploadingProfilePicture ? "not-allowed" : "pointer",
+                fontSize: "13px",
+                opacity: uploadingProfilePicture ? 0.7 : 1,
+              }}
+            >
+              {uploadingProfilePicture ? "Uploading..." : profilePicture ? "Change Photo" : "Upload Photo"}
+            </button>
+          </div>
 
-      {/* Portfolio Stats Section */}
-      <div
-        style={{
-          marginTop: "3rem",
-          padding: "2rem",
-          backgroundColor: "#FFFFFF",
-          border: "1px solid #E2E8F0",
-          borderRadius: "8px",
-        }}
-      >
-        <h2 style={{ color: "#0F172A", marginTop: 0, marginBottom: "1.5rem" }}>
-          Portfolio Statistics
-        </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1.5rem" }}>
-          <div>
-            <p style={{ color: "#475569", fontSize: "14px", margin: 0 }}>Total Items</p>
-            <p style={{ color: "#0F172A", fontSize: "32px", fontWeight: "bold", margin: "0.5rem 0 0 0" }}>
-              {portfolioItems.length}
-            </p>
+          {/* Business Information */}
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E2E8F0",
+              borderRadius: "8px",
+              padding: "1.5rem",
+              marginBottom: "1.5rem",
+            }}
+          >
+            <div style={{ marginBottom: "1rem" }}>
+              <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                <strong>Location:</strong> Helsinki
+              </p>
+              <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                <strong>Studio:</strong> ✓ Available
+              </p>
+            </div>
+            <button
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                backgroundColor: "#1E3A8A",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontSize: "14px",
+                fontWeight: "600",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
+            >
+              Request Quote →
+            </button>
           </div>
-          <div>
-            <p style={{ color: "#475569", fontSize: "14px", margin: 0 }}>Total Views</p>
-            <p style={{ color: "#0F172A", fontSize: "32px", fontWeight: "bold", margin: "0.5rem 0 0 0" }}>
-              {/* TODO: Add views count from backend */}
-              0
-            </p>
-          </div>
-          <div>
-            <p style={{ color: "#475569", fontSize: "14px", margin: 0 }}>Active Bids</p>
-            <p style={{ color: "#0F172A", fontSize: "32px", fontWeight: "bold", margin: "0.5rem 0 0 0" }}>
-              {/* TODO: Add active bids count from backend */}
-              0
-            </p>
+
+          {/* Services */}
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              border: "1px solid #E2E8F0",
+              borderRadius: "8px",
+              padding: "1.5rem",
+            }}
+          >
+            <h3 style={{ color: "#0F172A", margin: "0 0 1rem 0", fontSize: "18px" }}>Services</h3>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              {[
+                "Wedding Photography",
+                "Portrait Photography",
+                "Event Photography",
+                "Product Photography",
+                "Drone Photography",
+                "Video Production",
+                "Corporate Photography",
+                "Family Photography",
+              ].map((service) => (
+                <span
+                  key={service}
+                  style={{
+                    padding: "0.5rem 0.75rem",
+                    backgroundColor: "#F8FAFC",
+                    border: "1px solid #E2E8F0",
+                    borderRadius: "4px",
+                    fontSize: "13px",
+                    color: "#475569",
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#E2E8F0";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "#F8FAFC";
+                  }}
+                >
+                  {service}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
