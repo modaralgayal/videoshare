@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import jobsRoutes from "./routes/jobs.js";
+import uploadRoutes from "./routes/upload.js";
 
 // Load environment variables
 dotenv.config();
@@ -22,6 +23,7 @@ app.get("/", (req, res) => {
 
 app.use("/auth", authRoutes);
 app.use("/", jobsRoutes);
+app.use("/", uploadRoutes);
 
 app.listen(PORT, (error) => {
   if (!error) {

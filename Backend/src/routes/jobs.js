@@ -489,7 +489,7 @@ router.put("/api/portfolio", authenticateToken, async (req, res) => {
 
     // Create portfolio object
     const portfolio = {
-      entryType: "Portfolio",
+      entryType: "portfolio", // Use lowercase for GSI consistency
       id: `portfolio_${photographerId}`,
       photographerId: photographerId,
       description: description || "",
@@ -557,6 +557,7 @@ router.put("/api/profile-picture", authenticateToken, async (req, res) => {
 
     // Create or update profile object with name from JWT
     const profile = {
+      entryType: "profile", // Include entryType for GSI queries
       id: `profile_${photographerId}`,
       photographerId: photographerId,
       name: req.user.name || "Photographer",
