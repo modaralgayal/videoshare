@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUser, isAuthenticated } from "../controllers/user";
-import { savePortfolio, fetchPhotographerPortfolio, getProfilePicture, updateProfilePicture } from "../controllers/portfolio";
+import { savePortfolio, fetchPhotographerPortfolio, getProfilePicture, updateProfilePicture, fetchPhotographerProfile } from "../controllers/portfolio";
 import { uploadFile } from "../utils/upload";
 
 export const Portfolio = () => {
@@ -15,6 +15,8 @@ export const Portfolio = () => {
   const [descriptionError, setDescriptionError] = useState("");
   const [activeTab, setActiveTab] = useState("basic"); // "basic", "delivery", "reviews"
   const [profilePicture, setProfilePicture] = useState("");
+  const [profileData, setProfileData] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   
   // Upload states
   const [uploading, setUploading] = useState(false);
@@ -65,8 +67,24 @@ export const Portfolio = () => {
       }
     };
 
+    const loadProfile = async () => {
+      if (user && user.userType === "photographer") {
+        try {
+          setLoadingProfile(true);
+          const profile = await fetchPhotographerProfile();
+          setProfileData(profile);
+        } catch (err) {
+          console.error("Error loading profile:", err);
+          setProfileData(null);
+        } finally {
+          setLoadingProfile(false);
+        }
+      }
+    };
+
     loadPortfolio();
     loadProfilePicture();
+    loadProfile();
   }, [user]);
 
   // Handle file selection and upload
@@ -622,6 +640,153 @@ export const Portfolio = () => {
                     )}
                   </div>
 
+                  {/* Display profile title and descriptions from profile data */}
+                  {profileData?.title && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <h4 style={{ color: "#0F172A", margin: "0 0 0.5rem 0", fontSize: "18px", fontWeight: "600" }}>
+                        {profileData.title}
+                      </h4>
+                    </div>
+                  )}
+
+                  {profileData?.shortDescription && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <p
+                        style={{
+                          color: "#475569",
+                          fontSize: "16px",
+                          lineHeight: "1.8",
+                          whiteSpace: "pre-wrap",
+                          margin: 0,
+                        }}
+                      >
+                        {profileData.shortDescription}
+                      </p>
+                    </div>
+                  )}
+
+                  {profileData?.longDescription && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <p
+                        style={{
+                          color: "#475569",
+                          fontSize: "16px",
+                          lineHeight: "1.8",
+                          whiteSpace: "pre-wrap",
+                          margin: 0,
+                        }}
+                      >
+                        {profileData.longDescription}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Roles */}
+                  {profileData?.roles && profileData.roles.length > 0 && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <p style={{ color: "#0F172A", fontSize: "16px", fontWeight: "600", margin: "0 0 0.5rem 0" }}>
+                        Roles:
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                        {profileData.roles.map((role) => (
+                          <span
+                            key={role}
+                            style={{
+                              padding: "0.5rem 0.75rem",
+                              backgroundColor: "#F8FAFC",
+                              border: "1px solid #E2E8F0",
+                              borderRadius: "4px",
+                              fontSize: "14px",
+                              color: "#475569",
+                            }}
+                          >
+                            {role}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Specializations */}
+                  {profileData?.specializations && profileData.specializations.length > 0 && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <p style={{ color: "#0F172A", fontSize: "16px", fontWeight: "600", margin: "0 0 0.5rem 0" }}>
+                        Specializations:
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                        {profileData.specializations.map((spec) => (
+                          <span
+                            key={spec}
+                            style={{
+                              padding: "0.5rem 0.75rem",
+                              backgroundColor: "#F8FAFC",
+                              border: "1px solid #E2E8F0",
+                              borderRadius: "4px",
+                              fontSize: "14px",
+                              color: "#475569",
+                            }}
+                          >
+                            {spec}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Style Tags */}
+                  {profileData?.styleTags && profileData.styleTags.length > 0 && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <p style={{ color: "#0F172A", fontSize: "16px", fontWeight: "600", margin: "0 0 0.5rem 0" }}>
+                        Style:
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                        {profileData.styleTags.map((tag) => (
+                          <span
+                            key={tag}
+                            style={{
+                              padding: "0.5rem 0.75rem",
+                              backgroundColor: "#F8FAFC",
+                              border: "1px solid #E2E8F0",
+                              borderRadius: "4px",
+                              fontSize: "14px",
+                              color: "#475569",
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Categories */}
+                  {profileData?.categories && profileData.categories.length > 0 && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <p style={{ color: "#0F172A", fontSize: "16px", fontWeight: "600", margin: "0 0 0.5rem 0" }}>
+                        Categories:
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                        {profileData.categories.map((category) => (
+                          <span
+                            key={category}
+                            style={{
+                              padding: "0.5rem 0.75rem",
+                              backgroundColor: "#F8FAFC",
+                              border: "1px solid #E2E8F0",
+                              borderRadius: "4px",
+                              fontSize: "14px",
+                              color: "#475569",
+                            }}
+                          >
+                            {category}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Portfolio description (legacy field) */}
+
                   {isEditingDescription ? (
                     <div>
                       <textarea
@@ -720,9 +885,117 @@ export const Portfolio = () => {
               {activeTab === "delivery" && (
                 <div>
                   <h3 style={{ color: "#0F172A", margin: "0 0 1rem 0", fontSize: "20px" }}>Delivery & Travel Costs</h3>
-                  <p style={{ color: "#94A3B8", fontSize: "16px" }}>
-                    Information about delivery and travel costs will be displayed here.
-                  </p>
+                  
+                  {profileData?.averageDeliveryTime && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <p style={{ color: "#475569", fontSize: "16px", margin: "0 0 0.5rem 0" }}>
+                        <strong>Average Delivery Time:</strong> {profileData.averageDeliveryTime}
+                      </p>
+                    </div>
+                  )}
+
+                  {profileData?.revisionRounds !== null && profileData?.revisionRounds !== undefined && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <p style={{ color: "#475569", fontSize: "16px", margin: "0 0 0.5rem 0" }}>
+                        <strong>Revision Rounds Included:</strong> {profileData.revisionRounds}
+                      </p>
+                    </div>
+                  )}
+
+                  {profileData?.deliveryFormats && profileData.deliveryFormats.length > 0 && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <p style={{ color: "#475569", fontSize: "16px", margin: "0 0 0.5rem 0" }}>
+                        <strong>Delivery Formats:</strong>
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                        {profileData.deliveryFormats.map((format) => (
+                          <span
+                            key={format}
+                            style={{
+                              padding: "0.5rem 0.75rem",
+                              backgroundColor: "#F8FAFC",
+                              border: "1px solid #E2E8F0",
+                              borderRadius: "4px",
+                              fontSize: "14px",
+                              color: "#475569",
+                            }}
+                          >
+                            {format}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {profileData?.formatCapabilities && profileData.formatCapabilities.length > 0 && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <p style={{ color: "#475569", fontSize: "16px", margin: "0 0 0.5rem 0" }}>
+                        <strong>Format Capabilities:</strong>
+                      </p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                        {profileData.formatCapabilities.map((format) => (
+                          <span
+                            key={format}
+                            style={{
+                              padding: "0.5rem 0.75rem",
+                              backgroundColor: "#F8FAFC",
+                              border: "1px solid #E2E8F0",
+                              borderRadius: "4px",
+                              fontSize: "14px",
+                              color: "#475569",
+                            }}
+                          >
+                            {format}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {profileData?.travelCosts && (
+                    <div style={{ marginBottom: "1.5rem" }}>
+                      <p style={{ color: "#475569", fontSize: "16px", margin: "0 0 0.5rem 0" }}>
+                        <strong>Travel Costs:</strong>
+                      </p>
+                      {profileData.travelCosts.kmPrice && (
+                        <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.25rem 0" }}>
+                          Per km: €{profileData.travelCosts.kmPrice}
+                        </p>
+                      )}
+                      {profileData.travelCosts.minFee && (
+                        <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.25rem 0" }}>
+                          Minimum fee: €{profileData.travelCosts.minFee}
+                        </p>
+                      )}
+                      {profileData.travelCosts.travelTime && (
+                        <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.25rem 0" }}>
+                          Travel time: {profileData.travelCosts.travelTime}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {!profileData?.averageDeliveryTime && !profileData?.revisionRounds && 
+                   (!profileData?.deliveryFormats || profileData.deliveryFormats.length === 0) &&
+                   (!profileData?.formatCapabilities || profileData.formatCapabilities.length === 0) &&
+                   !profileData?.travelCosts && (
+                    <p style={{ color: "#94A3B8", fontSize: "16px" }}>
+                      No delivery information added yet. <button
+                        onClick={() => navigate("/photographer-profile")}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#1E3A8A",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                          fontSize: "16px",
+                          padding: 0,
+                        }}
+                      >
+                        Add delivery information
+                      </button>
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -828,8 +1101,13 @@ export const Portfolio = () => {
               </button>
             </div>
             <h3 style={{ color: "#0F172A", margin: "0 0 0.5rem 0", fontSize: "18px" }}>
-              {user?.name || "Photographer"}
+              {profileData?.contactName || profileData?.name || user?.name || "Photographer"}
             </h3>
+            {profileData?.title && (
+              <p style={{ color: "#64748B", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                {profileData.title}
+              </p>
+            )}
             <button
               onClick={() => profilePictureInputRef.current?.click()}
               disabled={uploadingProfilePicture}
@@ -859,14 +1137,69 @@ export const Portfolio = () => {
             }}
           >
             <div style={{ marginBottom: "1rem" }}>
-              <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
-                <strong>Location:</strong> Helsinki
-              </p>
-              <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
-                <strong>Studio:</strong> ✓ Available
-              </p>
+              {profileData?.hometown && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>Location:</strong> {profileData.hometown}
+                </p>
+              )}
+              {profileData?.serviceAreas && profileData.serviceAreas.length > 0 && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>Service Areas:</strong> {profileData.serviceAreas.join(", ")}
+                </p>
+              )}
+              {profileData?.operatorType && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>Type:</strong> {
+                    profileData.operatorType === "yksinyrittaja" ? "Solo" :
+                    profileData.operatorType === "tiimi" ? "Team" :
+                    profileData.operatorType === "tuotantoyhtio" ? "Production Company" :
+                    profileData.operatorType
+                  }
+                </p>
+              )}
+              {profileData?.teamSize && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>Team Size:</strong> {profileData.teamSize} {profileData.teamSize === 1 ? "person" : "people"}
+                </p>
+              )}
+              {profileData?.phoneNumber && profileData?.phoneNumberVisible && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>Phone:</strong> {profileData.phoneNumber}
+                </p>
+              )}
+              {profileData?.companyName && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>Company:</strong> {profileData.companyName}
+                </p>
+              )}
+              {profileData?.businessId && profileData?.businessIdVisible && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>Business ID:</strong> {profileData.businessId}
+                </p>
+              )}
+              {profileData?.vatObliged && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>VAT Obliged:</strong> ✓ Yes
+                </p>
+              )}
+              {profileData?.maxTravelDistance && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>Max Travel:</strong> {profileData.maxTravelDistance} km
+                </p>
+              )}
+              {profileData?.servesAllFinland && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>Coverage:</strong> All of Finland
+                </p>
+              )}
+              {profileData?.servesAbroad && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>International:</strong> ✓ Available
+                </p>
+              )}
             </div>
             <button
+              onClick={() => navigate("/photographer-profile")}
               style={{
                 width: "100%",
                 padding: "0.75rem",
@@ -881,7 +1214,7 @@ export const Portfolio = () => {
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
             >
-              Request Quote →
+              Edit Profile →
             </button>
           </div>
 
@@ -895,40 +1228,170 @@ export const Portfolio = () => {
             }}
           >
             <h3 style={{ color: "#0F172A", margin: "0 0 1rem 0", fontSize: "18px" }}>Services</h3>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-              {[
-                "Wedding Photography",
-                "Portrait Photography",
-                "Event Photography",
-                "Product Photography",
-                "Drone Photography",
-                "Video Production",
-                "Corporate Photography",
-                "Family Photography",
-              ].map((service) => (
-                <span
-                  key={service}
-                  style={{
-                    padding: "0.5rem 0.75rem",
-                    backgroundColor: "#F8FAFC",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: "4px",
-                    fontSize: "13px",
-                    color: "#475569",
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#E2E8F0";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#F8FAFC";
-                  }}
-                >
-                  {service}
-                </span>
-              ))}
-            </div>
+            {loadingProfile ? (
+              <p style={{ color: "#94A3B8", fontSize: "14px" }}>Loading services...</p>
+            ) : profileData?.mainServices && profileData.mainServices.length > 0 ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                {profileData.mainServices.map((service) => (
+                  <span
+                    key={service}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      backgroundColor: "#F8FAFC",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: "4px",
+                      fontSize: "13px",
+                      color: "#475569",
+                    }}
+                  >
+                    {service}
+                  </span>
+                ))}
+              </div>
+            ) : profileData?.categories && profileData.categories.length > 0 ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                {profileData.categories.map((category) => (
+                  <span
+                    key={category}
+                    style={{
+                      padding: "0.5rem 0.75rem",
+                      backgroundColor: "#F8FAFC",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: "4px",
+                      fontSize: "13px",
+                      color: "#475569",
+                    }}
+                  >
+                    {category}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: "#94A3B8", fontSize: "14px" }}>No services added yet.</p>
+            )}
           </div>
+
+          {/* Pricing Information */}
+          {(profileData?.minStartingPrice || profileData?.dayHourPrice) && (
+            <div
+              style={{
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: "8px",
+                padding: "1.5rem",
+                marginTop: "1.5rem",
+              }}
+            >
+              <h3 style={{ color: "#0F172A", margin: "0 0 1rem 0", fontSize: "18px" }}>Pricing</h3>
+              {profileData.minStartingPrice && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>Starting from:</strong> €{profileData.minStartingPrice.toLocaleString()}
+                </p>
+              )}
+              {profileData.dayHourPrice && (
+                <p style={{ color: "#475569", fontSize: "14px", margin: "0 0 0.5rem 0" }}>
+                  <strong>Day/Hour:</strong> €{profileData.dayHourPrice.toLocaleString()}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Social Media Links */}
+          {(profileData?.website || profileData?.instagram || profileData?.youtube || profileData?.vimeo || profileData?.tiktok) && (
+            <div
+              style={{
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #E2E8F0",
+                borderRadius: "8px",
+                padding: "1.5rem",
+                marginTop: "1.5rem",
+              }}
+            >
+              <h3 style={{ color: "#0F172A", margin: "0 0 1rem 0", fontSize: "18px" }}>Links</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {profileData.website && (
+                  <a
+                    href={profileData.website.startsWith("http") ? profileData.website : `https://${profileData.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#1E3A8A",
+                      fontSize: "14px",
+                      textDecoration: "none",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
+                    onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
+                  >
+                    🌐 Website
+                  </a>
+                )}
+                {profileData.instagram && (
+                  <a
+                    href={profileData.instagram.startsWith("http") ? profileData.instagram : `https://instagram.com/${profileData.instagram.replace("@", "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#1E3A8A",
+                      fontSize: "14px",
+                      textDecoration: "none",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
+                    onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
+                  >
+                    📷 Instagram
+                  </a>
+                )}
+                {profileData.youtube && (
+                  <a
+                    href={profileData.youtube}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#1E3A8A",
+                      fontSize: "14px",
+                      textDecoration: "none",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
+                    onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
+                  >
+                    ▶️ YouTube
+                  </a>
+                )}
+                {profileData.vimeo && (
+                  <a
+                    href={profileData.vimeo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#1E3A8A",
+                      fontSize: "14px",
+                      textDecoration: "none",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
+                    onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
+                  >
+                    🎬 Vimeo
+                  </a>
+                )}
+                {profileData.tiktok && (
+                  <a
+                    href={profileData.tiktok.startsWith("http") ? profileData.tiktok : `https://tiktok.com/@${profileData.tiktok.replace("@", "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#1E3A8A",
+                      fontSize: "14px",
+                      textDecoration: "none",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.textDecoration = "underline"}
+                    onMouseLeave={(e) => e.currentTarget.style.textDecoration = "none"}
+                  >
+                    🎵 TikTok
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

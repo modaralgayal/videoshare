@@ -250,7 +250,7 @@ export const ViewBids = () => {
                     </button>
                   )}
                   <button
-                    onClick={() => navigate(`/photographer/${bid.videographerId}/portfolio`)}
+                    onClick={() => navigate(`/photographer/${bid.videographerId}/profile`)}
                     style={{
                       padding: "0.5rem 1rem",
                       backgroundColor: "#1E3A8A",
@@ -263,7 +263,7 @@ export const ViewBids = () => {
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
                   >
-                    View Portfolio
+                    View Full Profile
                   </button>
                 </div>
               </div>

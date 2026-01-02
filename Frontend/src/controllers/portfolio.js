@@ -89,3 +89,67 @@ export const updateProfilePicture = async (profilePictureUrl) => {
     throw new Error(errorMessage);
   }
 };
+
+export const savePhotographerProfile = async (profileData) => {
+  try {
+    const response = await apiClient.put(`${API_URL}/api/photographer-profile`, profileData);
+
+    if (response.data.success) {
+      return {
+        success: true,
+        message: response.data.message,
+        profile: response.data.profile,
+      };
+    }
+
+    throw new Error(response.data.message || "Failed to save profile");
+  } catch (error) {
+    const errorMessage =
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
+      "Failed to save profile. Please try again.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const fetchPhotographerProfile = async () => {
+  try {
+    const response = await apiClient.get(`${API_URL}/api/photographer-profile`);
+
+    if (response.data.success) {
+      return response.data.profile;
+    }
+
+    throw new Error(response.data.message || "Failed to fetch profile");
+  } catch (error) {
+    const errorMessage =
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
+      "Failed to fetch profile. Please try again.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const fetchPhotographerProfileForCustomer = async (photographerId) => {
+  try {
+    const response = await apiClient.get(`${API_URL}/api/photographer-profile/${photographerId}`);
+
+    if (response.data.success) {
+      return {
+        profile: response.data.profile,
+        portfolio: response.data.portfolio,
+      };
+    }
+
+    throw new Error(response.data.message || "Failed to fetch photographer profile");
+  } catch (error) {
+    const errorMessage =
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
+      "Failed to fetch photographer profile. Please try again.";
+    throw new Error(errorMessage);
+  }
+};

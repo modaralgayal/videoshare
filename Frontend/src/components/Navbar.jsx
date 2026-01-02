@@ -196,6 +196,20 @@ export const Navbar = () => {
             >
               Portfolio
             </button>
+            <button
+              onClick={() => navigate("/photographer-profile")}
+              style={{
+                backgroundColor: "transparent",
+                color: "white",
+                border: "1px solid white",
+                padding: "0.5rem 1rem",
+                borderRadius: "5px",
+                cursor: "pointer",
+                fontSize: "14px",
+              }}
+            >
+              Profile
+            </button>
           </div>
         )}
       </div>

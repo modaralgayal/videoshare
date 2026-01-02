@@ -11,6 +11,8 @@ import ViewBids from "./pages/ViewBids";
 import MyBids from "./pages/MyBids";
 import Portfolio from "./pages/Portfolio";
 import ViewPhotographerPortfolio from "./pages/ViewPhotographerPortfolio";
+import ViewPhotographerProfile from "./pages/ViewPhotographerProfile";
+import PhotographerProfile from "./pages/PhotographerProfile";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
@@ -61,7 +63,9 @@ function App() {
         <Route path="/view-bids" element={<ViewBids />} />
         <Route path="/my-bids" element={<MyBids />} />
         <Route path="/portfolio" element={<Portfolio />} />
+        <Route path="/photographer-profile" element={<PhotographerProfile />} />
         <Route path="/photographer/:photographerId/portfolio" element={<ViewPhotographerPortfolio />} />
+        <Route path="/photographer/:photographerId/profile" element={<ViewPhotographerProfile />} />
         </Routes>
       </div>
       <Footer />

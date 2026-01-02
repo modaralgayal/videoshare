@@ -658,4 +658,274 @@ router.get("/api/portfolio/:photographerId", authenticateToken, async (req, res)
   }
 });
 
+// Save or update photographer profile (comprehensive profile data)
+router.put("/api/photographer-profile", authenticateToken, async (req, res) => {
+  try {
+    // Authorization: Only photographers can update their profile
+    if (req.user.userType !== "photographer") {
+      return res.status(403).json({ error: "Only photographers can update their profile" });
+    }
+
+    const photographerId = req.user.uid;
+    const profileData = req.body;
+
+    // Get existing profile to merge with new data
+    const existingResult = await ddb.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          id: `profile_${photographerId}`
+        }
+      })
+    );
+
+    const existingProfile = existingResult.Item || {};
+
+    // Build comprehensive profile object
+    const profile = {
+      entryType: "profile",
+      id: `profile_${photographerId}`,
+      photographerId: photographerId,
+      name: req.user.name || existingProfile.name || "Photographer",
+      profilePicture: existingProfile.profilePicture || "",
+      updatedAt: new Date().toISOString(),
+      createdAt: existingProfile.createdAt || new Date().toISOString(),
+      
+      // Tili & yhteys (Account & Contact)
+      phoneNumber: profileData.phoneNumber || existingProfile.phoneNumber || "",
+      phoneNumberVisible: profileData.phoneNumberVisible !== undefined ? profileData.phoneNumberVisible : existingProfile.phoneNumberVisible !== undefined ? existingProfile.phoneNumberVisible : true,
+      contactName: profileData.contactName || existingProfile.contactName || "",
+      companyName: profileData.companyName || existingProfile.companyName || "",
+      businessId: profileData.businessId || existingProfile.businessId || "",
+      businessIdVisible: profileData.businessIdVisible !== undefined ? profileData.businessIdVisible : existingProfile.businessIdVisible !== undefined ? existingProfile.businessIdVisible : true,
+      vatObliged: profileData.vatObliged !== undefined ? profileData.vatObliged : existingProfile.vatObliged !== undefined ? existingProfile.vatObliged : false,
+      billingModel: profileData.billingModel || existingProfile.billingModel || "",
+      profileLanguages: profileData.profileLanguages || existingProfile.profileLanguages || [],
+      
+      // Profiilin peruskuvaus (Basic Profile Description)
+      title: profileData.title || existingProfile.title || "",
+      shortDescription: profileData.shortDescription || existingProfile.shortDescription || "",
+      longDescription: profileData.longDescription || existingProfile.longDescription || "",
+      
+      // Yritystyyppi & tiimi (Company Type & Team)
+      operatorType: profileData.operatorType || existingProfile.operatorType || "",
+      teamSize: profileData.teamSize !== undefined ? profileData.teamSize : existingProfile.teamSize !== undefined ? existingProfile.teamSize : null,
+      roles: profileData.roles || existingProfile.roles || [],
+      
+      // Toiminta-alue (Service Area)
+      hometown: profileData.hometown || existingProfile.hometown || "",
+      serviceAreas: profileData.serviceAreas || existingProfile.serviceAreas || [],
+      maxTravelDistance: profileData.maxTravelDistance !== undefined ? profileData.maxTravelDistance : existingProfile.maxTravelDistance !== undefined ? existingProfile.maxTravelDistance : null,
+      travelCosts: profileData.travelCosts || existingProfile.travelCosts || null, // { kmPrice, minFee, travelTime }
+      servesAllFinland: profileData.servesAllFinland !== undefined ? profileData.servesAllFinland : existingProfile.servesAllFinland !== undefined ? existingProfile.servesAllFinland : false,
+      servesAbroad: profileData.servesAbroad !== undefined ? profileData.servesAbroad : existingProfile.servesAbroad !== undefined ? existingProfile.servesAbroad : false,
+      
+      // Palvelut & osaaminen (Services & Expertise)
+      mainServices: profileData.mainServices || existingProfile.mainServices || [],
+      categories: profileData.categories || existingProfile.categories || [],
+      styleTags: profileData.styleTags || existingProfile.styleTags || [],
+      experienceLevel: profileData.experienceLevel || existingProfile.experienceLevel || null, // { years, gigs, level }
+      specializations: profileData.specializations || existingProfile.specializations || [],
+      
+      // Hintatiedot (Pricing Information)
+      minStartingPrice: profileData.minStartingPrice !== undefined ? profileData.minStartingPrice : existingProfile.minStartingPrice !== undefined ? existingProfile.minStartingPrice : null,
+      dayHourPrice: profileData.dayHourPrice !== undefined ? profileData.dayHourPrice : existingProfile.dayHourPrice !== undefined ? existingProfile.dayHourPrice : null,
+      packages: profileData.packages || existingProfile.packages || [], // [{ name, price, included }]
+      includedInPrice: profileData.includedInPrice || existingProfile.includedInPrice || [],
+      additionalServices: profileData.additionalServices || existingProfile.additionalServices || [], // [{ name, price }]
+      
+      // Toimitus & prosessi (Delivery & Process)
+      averageDeliveryTime: profileData.averageDeliveryTime || existingProfile.averageDeliveryTime || "",
+      revisionRounds: profileData.revisionRounds !== undefined ? profileData.revisionRounds : existingProfile.revisionRounds !== undefined ? existingProfile.revisionRounds : null,
+      deliveryFormats: profileData.deliveryFormats || existingProfile.deliveryFormats || [],
+      formatCapabilities: profileData.formatCapabilities || existingProfile.formatCapabilities || [],
+      
+      // Kalusto (Equipment)
+      cameras: profileData.cameras || existingProfile.cameras || [],
+      equipment: profileData.equipment || existingProfile.equipment || [], // lenses, drones, gimbals
+      lightingAudio: profileData.lightingAudio || existingProfile.lightingAudio || [],
+      
+      // Sertifikaatit & turvallisuus (Certifications & Safety)
+      droneCertifications: profileData.droneCertifications || existingProfile.droneCertifications || [],
+      liabilityInsurance: profileData.liabilityInsurance || existingProfile.liabilityInsurance || null, // { hasInsurance, amount }
+      safetyCards: profileData.safetyCards || existingProfile.safetyCards || [],
+      
+      // Saatavuus (Availability)
+      weeklyAvailability: profileData.weeklyAvailability || existingProfile.weeklyAvailability || [],
+      leadTime: profileData.leadTime || existingProfile.leadTime || "",
+      
+      // Viestintä & käytännöt (Communication & Practices)
+      preferredContactMethod: profileData.preferredContactMethod || existingProfile.preferredContactMethod || "",
+      hasContractTemplate: profileData.hasContractTemplate !== undefined ? profileData.hasContractTemplate : existingProfile.hasContractTemplate !== undefined ? existingProfile.hasContractTemplate : false,
+      cancellationTerms: profileData.cancellationTerms || existingProfile.cancellationTerms || "",
+      depositRequired: profileData.depositRequired !== undefined ? profileData.depositRequired : existingProfile.depositRequired !== undefined ? existingProfile.depositRequired : false,
+      
+      // Some & kanavat (Social Media & Channels)
+      website: profileData.website || existingProfile.website || "",
+      instagram: profileData.instagram || existingProfile.instagram || "",
+      tiktok: profileData.tiktok || existingProfile.tiktok || "",
+      youtube: profileData.youtube || existingProfile.youtube || "",
+      vimeo: profileData.vimeo || existingProfile.vimeo || "",
+      mediaKit: profileData.mediaKit || existingProfile.mediaKit || "",
+    };
+
+    await ddb.send(
+      new PutCommand({
+        TableName: TABLE_NAME,
+        Item: profile,
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      profile: profile,
+    });
+  } catch (error) {
+    console.error("Error updating photographer profile:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get photographer profile (for viewing/editing)
+router.get("/api/photographer-profile", authenticateToken, async (req, res) => {
+  try {
+    // Authorization: Only photographers can view their own profile
+    if (req.user.userType !== "photographer") {
+      return res.status(403).json({ error: "Only photographers can view their profile" });
+    }
+
+    const photographerId = req.user.uid;
+
+    const result = await ddb.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          id: `profile_${photographerId}`
+        }
+      })
+    );
+
+    const profile = result.Item;
+
+    if (!profile) {
+      return res.status(200).json({
+        success: true,
+        profile: {
+          photographerId,
+          name: req.user.name || "Photographer",
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      profile: profile,
+    });
+  } catch (error) {
+    console.error("Error fetching photographer profile:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get photographer profile for customers to view (public profile)
+router.get("/api/photographer-profile/:photographerId", authenticateToken, async (req, res) => {
+  try {
+    // Authorization: Only customers can view photographer profiles
+    if (req.user.userType !== "customer") {
+      return res.status(403).json({ error: "Only customers can view photographer profiles" });
+    }
+
+    const { photographerId } = req.params;
+
+    // Get profile
+    const profileResult = await ddb.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          id: `profile_${photographerId}`
+        }
+      })
+    );
+
+    const profile = profileResult.Item;
+
+    // Get portfolio
+    const portfolioResult = await ddb.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          id: `portfolio_${photographerId}`
+        }
+      })
+    );
+
+    const portfolio = portfolioResult.Item;
+
+    // Filter out sensitive information based on visibility settings
+    const publicProfile = profile ? {
+      photographerId: profile.photographerId,
+      name: profile.name || profile.contactName || "Photographer",
+      contactName: profile.contactName,
+      profilePicture: profile.profilePicture,
+      title: profile.title,
+      shortDescription: profile.shortDescription,
+      longDescription: profile.longDescription,
+      companyName: profile.companyName,
+      businessId: profile.businessIdVisible ? profile.businessId : undefined,
+      vatObliged: profile.vatObliged,
+      operatorType: profile.operatorType,
+      teamSize: profile.teamSize,
+      roles: profile.roles,
+      hometown: profile.hometown,
+      serviceAreas: profile.serviceAreas,
+      maxTravelDistance: profile.maxTravelDistance,
+      servesAllFinland: profile.servesAllFinland,
+      servesAbroad: profile.servesAbroad,
+      mainServices: profile.mainServices,
+      categories: profile.categories,
+      styleTags: profile.styleTags,
+      specializations: profile.specializations,
+      minStartingPrice: profile.minStartingPrice,
+      dayHourPrice: profile.dayHourPrice,
+      includedInPrice: profile.includedInPrice,
+      averageDeliveryTime: profile.averageDeliveryTime,
+      revisionRounds: profile.revisionRounds,
+      deliveryFormats: profile.deliveryFormats,
+      formatCapabilities: profile.formatCapabilities,
+      cameras: profile.cameras,
+      equipment: profile.equipment,
+      lightingAudio: profile.lightingAudio,
+      droneCertifications: profile.droneCertifications,
+      liabilityInsurance: profile.liabilityInsurance,
+      safetyCards: profile.safetyCards,
+      weeklyAvailability: profile.weeklyAvailability,
+      leadTime: profile.leadTime,
+      website: profile.website,
+      instagram: profile.instagram,
+      tiktok: profile.tiktok,
+      youtube: profile.youtube,
+      vimeo: profile.vimeo,
+      phoneNumber: profile.phoneNumberVisible ? profile.phoneNumber : undefined,
+    } : null;
+
+    res.status(200).json({
+      success: true,
+      profile: publicProfile,
+      portfolio: portfolio ? {
+        photographerId: portfolio.photographerId,
+        description: portfolio.description || "",
+        items: portfolio.items || [],
+      } : {
+        photographerId,
+        description: "",
+        items: [],
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching photographer profile for customer:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
