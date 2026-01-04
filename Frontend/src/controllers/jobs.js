@@ -134,3 +134,25 @@ export const fetchBidsForPhotographer = async () => {
     throw new Error(errorMessage);
   }
 };
+
+export const deleteJob = async (jobId) => {
+  try {
+    const response = await apiClient.delete(`${API_URL}/api/job/${jobId}`);
+
+    if (response.data.success) {
+      return {
+        success: true,
+        message: response.data.message,
+      };
+    }
+
+    throw new Error(response.data.message || "Failed to delete job");
+  } catch (error) {
+    const errorMessage =
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
+      "Failed to delete job. Please try again.";
+    throw new Error(errorMessage);
+  }
+};

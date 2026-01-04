@@ -126,8 +126,10 @@ export const MyBids = () => {
                     {bid.job.description}
                   </p>
                   <p style={{ margin: "0.5rem 0 0 0", fontSize: "14px", color: "#475569" }}>
-                    <strong>Budget Range:</strong> €{bid.job.budget_min} – €
-                    {bid.job.budget_max}
+                    <strong>Budget Range:</strong>{" "}
+                    {bid.job.budgetUnknown || (!bid.job.budgetMin && !bid.job.budgetMax && !bid.job.budget_min && !bid.job.budget_max)
+                      ? "I don't know"
+                      : `€${(bid.job.budgetMin || bid.job.budget_min || 0).toLocaleString()} – €${(bid.job.budgetMax || bid.job.budget_max || 0).toLocaleString()}`}
                   </p>
                   <p style={{ margin: "0.5rem 0 0 0", fontSize: "14px", color: "#475569" }}>
                     <strong>Job Status:</strong> {bid.job.status}

@@ -1,7 +1,245 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUser, isAuthenticated } from "../controllers/user";
 import { savePhotographerProfile, fetchPhotographerProfile } from "../controllers/portfolio";
+
+// Common style tags for photography/videography
+const COMMON_STYLE_TAGS = [
+  "Cinematic", "Dokumentaarinen", "Raikas", "Luxury", "Minimalistinen", "Vintage",
+  "Modern", "Klassinen", "Eksperimentaalinen", "Natural", "Dramatic", "Romantic",
+  "Corporate", "Editorial", "Commercial", "Artistic", "Documentary", "Narrative",
+  "Aesthetic", "Bold", "Soft", "High contrast", "Muted", "Vibrant", "Elegant",
+  "Raw", "Polished", "Authentic", "Stylized", "Realistic", "Abstract", "Clean",
+  "Gritty", "Bright", "Moody", "Warm", "Cool", "Neutral", "Colorful", "Monochrome"
+];
+
+// Common specializations for photography/videography
+const COMMON_SPECIALIZATIONS = [
+  "FPV", "Värimäärittely", "Storytelling", "Haastattelut", "Drone-kuvaus",
+  "Aerial", "Underwater", "Time-lapse", "Slow motion", "Hyperlapse",
+  "360° video", "Virtual Reality", "Live streaming", "Event coverage",
+  "Product photography", "Real estate", "Wedding", "Corporate", "Documentary",
+  "Music videos", "Commercial", "Social media content", "Short-form content",
+  "Long-form content", "Post-production", "Color grading", "Sound design",
+  "Motion graphics", "Animation", "VFX", "Green screen", "Multi-camera",
+  "Interview setup", "B-roll", "Cinematic sequences", "Action sports",
+  "Nature & wildlife", "Travel", "Food", "Fashion", "Portrait", "Architecture"
+];
+
+// Searchable Tag Selector Component
+const SearchableTagSelector = ({ label, selectedTags, onTagsChange, options, placeholder }) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Filter options based on search term
+  const filteredOptions = options.filter(
+    (option) =>
+      !selectedTags.includes(option) &&
+      option.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleAddTag = (tag) => {
+    if (tag && !selectedTags.includes(tag)) {
+      onTagsChange([...selectedTags, tag]);
+      setSearchTerm("");
+      setIsOpen(false);
+    }
+  };
+
+  const handleRemoveTag = (tag) => {
+    onTagsChange(selectedTags.filter((t) => t !== tag));
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && searchTerm.trim()) {
+      e.preventDefault();
+      // Add custom tag if it doesn't exist in options, or add from filtered options
+      const tagToAdd = filteredOptions.length > 0 && filteredOptions[0].toLowerCase() === searchTerm.toLowerCase().trim()
+        ? filteredOptions[0]
+        : searchTerm.trim();
+      handleAddTag(tagToAdd);
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
+      setSearchTerm("");
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setSearchTerm(e.target.value);
+    if (!isOpen) {
+      setIsOpen(true);
+    }
+  };
+
+  const handleInputFocus = () => {
+    setIsOpen(true);
+  };
+
+  return (
+    <div style={{ marginBottom: "1.5rem" }}>
+      <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500", color: "#0F172A", fontSize: "14px" }}>
+        {label}
+      </label>
+      
+      {/* Selected Tags Display */}
+      {selectedTags.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.5rem" }}>
+          {selectedTags.map((tag) => (
+            <span
+              key={tag}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.5rem 0.75rem",
+                backgroundColor: "#1E3A8A",
+                color: "white",
+                borderRadius: "20px",
+                fontSize: "13px",
+                fontWeight: "500",
+              }}
+            >
+              {tag}
+              <button
+                type="button"
+                onClick={() => handleRemoveTag(tag)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                  lineHeight: "1",
+                  padding: "0",
+                  marginLeft: "0.25rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "18px",
+                  height: "18px",
+                  borderRadius: "50%",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.2)"}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Search Input and Dropdown */}
+      <div ref={containerRef} style={{ position: "relative" }}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={searchTerm}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
+          onKeyDown={handleKeyDown}
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            border: "1px solid #E2E8F0",
+            borderRadius: "5px",
+            fontSize: "14px",
+            fontFamily: "inherit",
+          }}
+          placeholder={placeholder || "Search or type to add tags..."}
+        />
+
+        {/* Dropdown */}
+        {isOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              backgroundColor: "white",
+              border: "1px solid #E2E8F0",
+              borderRadius: "5px",
+              marginTop: "0.25rem",
+              maxHeight: "300px",
+              overflowY: "auto",
+              zIndex: 1000,
+              boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            {filteredOptions.length > 0 ? (
+              filteredOptions.slice(0, 20).map((option) => (
+                <div
+                  key={option}
+                  onClick={() => handleAddTag(option)}
+                  style={{
+                    padding: "0.75rem",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    borderBottom: "1px solid #F1F5F9",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#F8FAFC";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "white";
+                  }}
+                >
+                  {option}
+                </div>
+              ))
+            ) : searchTerm.trim() ? (
+              <div
+                onClick={() => handleAddTag(searchTerm.trim())}
+                style={{
+                  padding: "0.75rem",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  color: "#1E3A8A",
+                  fontWeight: "500",
+                  borderBottom: "1px solid #F1F5F9",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#F8FAFC";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "white";
+                }}
+              >
+                + Add "{searchTerm.trim()}"
+              </div>
+            ) : (
+              <div style={{ padding: "0.75rem", fontSize: "14px", color: "#64748B" }}>
+                Start typing to search or add a custom tag
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      <p style={{ fontSize: "12px", color: "#64748B", marginTop: "0.25rem" }}>
+        Type to search or press Enter to add a custom tag. Spaces are allowed.
+      </p>
+    </div>
+  );
+};
 
 export const PhotographerProfile = () => {
   const navigate = useNavigate();
@@ -621,27 +859,21 @@ export const PhotographerProfile = () => {
             </div>
           </div>
 
-          <div style={{ marginBottom: "1.5rem" }}>
-            <label style={labelStyle}>Style Tags</label>
-            <input
-              type="text"
-              value={formData.styleTags.join(", ")}
-              onChange={(e) => handleInputChange("styleTags", e.target.value.split(",").map(s => s.trim()).filter(s => s))}
-              style={inputStyle}
-              placeholder="e.g., cinematic, dokumentaarinen, raikas, luxury (comma-separated)"
-            />
-          </div>
+          <SearchableTagSelector
+            label="Style Tags"
+            selectedTags={formData.styleTags}
+            onTagsChange={(tags) => handleInputChange("styleTags", tags)}
+            options={COMMON_STYLE_TAGS}
+            placeholder="Search style tags (e.g., cinematic, dokumentaarinen, luxury)..."
+          />
 
-          <div style={{ marginBottom: "1.5rem" }}>
-            <label style={labelStyle}>Specializations</label>
-            <input
-              type="text"
-              value={formData.specializations.join(", ")}
-              onChange={(e) => handleInputChange("specializations", e.target.value.split(",").map(s => s.trim()).filter(s => s))}
-              style={inputStyle}
-              placeholder="e.g., FPV, värimäärittely, storytelling, haastattelut (comma-separated)"
-            />
-          </div>
+          <SearchableTagSelector
+            label="Specializations"
+            selectedTags={formData.specializations}
+            onTagsChange={(tags) => handleInputChange("specializations", tags)}
+            options={COMMON_SPECIALIZATIONS}
+            placeholder="Search specializations (e.g., FPV, värimäärittely, storytelling)..."
+          />
         </div>
 
         {/* Hintatiedot (Pricing Information) */}

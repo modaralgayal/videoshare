@@ -1,5 +1,5 @@
 import express from "express";
-import { PutCommand, UpdateCommand, QueryCommand, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { PutCommand, UpdateCommand, QueryCommand, GetCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from "uuid";
 import { ddb } from "../client/dynamodb.js";
 import { authenticateToken } from "../middleware/auth.js";
@@ -18,43 +18,136 @@ router.post("/api/job", authenticateToken, async (req, res) => {
     // Use customerId from JWT, not from request body (security)
     const customerId = req.user.uid;
 
-    // Input validation
-    const { title, description, budget_min, budget_max } = req.body;
-
-    if (!title || typeof title !== "string" || title.trim().length === 0) {
-      return res.status(400).json({ error: "Title is required and must be a non-empty string" });
-    }
+    // Validate required fields
+    const { description, services, city, radius, duration, difficulty } = req.body;
 
     if (!description || typeof description !== "string" || description.trim().length === 0) {
       return res.status(400).json({ error: "Description is required and must be a non-empty string" });
     }
 
-    const minBudget = Number(budget_min);
-    const maxBudget = Number(budget_max);
-
-    if (isNaN(minBudget) || minBudget <= 0) {
-      return res.status(400).json({ error: "Minimum budget must be a positive number" });
+    if (!services || !Array.isArray(services) || services.length === 0) {
+      return res.status(400).json({ error: "At least one service must be selected" });
     }
 
-    if (isNaN(maxBudget) || maxBudget <= 0) {
-      return res.status(400).json({ error: "Maximum budget must be a positive number" });
+    if (!city || typeof city !== "string" || city.trim().length === 0) {
+      return res.status(400).json({ error: "City is required" });
     }
 
-    if (minBudget >= maxBudget) {
-      return res.status(400).json({ error: "Maximum budget must be greater than minimum budget" });
+    if (!radius) {
+      return res.status(400).json({ error: "Radius is required" });
+    }
+
+    if (!duration) {
+      return res.status(400).json({ error: "Duration is required" });
+    }
+
+    if (!difficulty) {
+      return res.status(400).json({ error: "Difficulty level is required" });
+    }
+
+    // Validate budget if not unknown
+    if (!req.body.budgetUnknown) {
+      const minBudget = Number(req.body.budgetMin);
+      const maxBudget = Number(req.body.budgetMax);
+
+      if (isNaN(minBudget) || minBudget <= 0) {
+        return res.status(400).json({ error: "Minimum budget must be a positive number" });
+      }
+
+      if (isNaN(maxBudget) || maxBudget <= 0) {
+        return res.status(400).json({ error: "Maximum budget must be a positive number" });
+      }
+
+      if (minBudget >= maxBudget) {
+        return res.status(400).json({ error: "Maximum budget must be greater than minimum budget" });
+      }
+    }
+
+    // Validate date or date range
+    if (!req.body.date && (!req.body.dateRange || !req.body.dateRange.start)) {
+      return res.status(400).json({ error: "Date or date range is required" });
     }
 
     const id = uuidv4();
+    
+    // Create comprehensive job object
     const job = {
       id: id,
       jobId: id,
       entryType: "job",
-      customerId: customerId, // From JWT, not request body
-      title: title.trim(),
+      customerId: customerId,
+      
+      // Basic settings
+      customerType: req.body.customerType || null,
+      projectContext: req.body.projectContext || null,
+      
+      // Services
+      services: services,
+      
+      // Location
+      city: city.trim(),
+      area: req.body.area ? req.body.area.trim() : null,
+      exactAddress: req.body.exactAddress ? req.body.exactAddress.trim() : null, // Hidden until acceptance
+      radius: radius,
+      allowFurther: req.body.allowFurther || false,
+      
+      // Date
+      date: req.body.date || null,
+      dateRange: req.body.dateRange || null,
+      dateNotLocked: req.body.dateNotLocked || false,
+      
+      // Duration & Budget
+      duration: duration,
+      budgetMin: req.body.budgetUnknown ? null : Number(req.body.budgetMin),
+      budgetMax: req.body.budgetUnknown ? null : Number(req.body.budgetMax),
+      budgetUnknown: req.body.budgetUnknown || false,
+      
+      // Profile & Difficulty
+      preferredProfile: req.body.preferredProfile || null,
+      difficulty: difficulty,
+      difficultyDetails: req.body.difficultyDetails ? req.body.difficultyDetails.trim() : null,
+      priority: req.body.priority || [],
+      
+      // Service modules (only include if service is selected)
+      photoSubjects: services.includes("valokuvat") ? (req.body.photoSubjects || []) : null,
+      photoCount: services.includes("valokuvat") ? (req.body.photoCount || null) : null,
+      photoEditing: services.includes("valokuvat") ? (req.body.photoEditing || null) : null,
+      photoUsage: services.includes("valokuvat") ? (req.body.photoUsage || []) : null,
+      photoDetails: services.includes("valokuvat") ? (req.body.photoDetails ? req.body.photoDetails.trim() : null) : null,
+      
+      videoCount: services.includes("videotuotanto") ? (req.body.videoCount || null) : null,
+      videoLength: services.includes("videotuotanto") ? (req.body.videoLength || null) : null,
+      videoFormat: services.includes("videotuotanto") ? (req.body.videoFormat || []) : null,
+      videoNeeds: services.includes("videotuotanto") ? (req.body.videoNeeds || []) : null,
+      videoUsage: services.includes("videotuotanto") ? (req.body.videoUsage || []) : null,
+      videoDetails: services.includes("videotuotanto") ? (req.body.videoDetails ? req.body.videoDetails.trim() : null) : null,
+      
+      droneSubject: (services.includes("dronekuvat") || services.includes("dronevideo")) ? (req.body.droneSubject || []) : null,
+      droneRestriction: (services.includes("dronekuvat") || services.includes("dronevideo")) ? (req.body.droneRestriction || null) : null,
+      droneDetails: (services.includes("dronekuvat") || services.includes("dronevideo")) ? (req.body.droneDetails ? req.body.droneDetails.trim() : null) : null,
+      
+      shortVideoChannels: services.includes("lyhytvideot") ? (req.body.shortVideoChannels || []) : null,
+      shortVideoWhoFilms: services.includes("lyhytvideot") ? (req.body.shortVideoWhoFilms || null) : null,
+      shortVideoFrequency: services.includes("lyhytvideot") ? (req.body.shortVideoFrequency || null) : null,
+      shortVideoCount: services.includes("lyhytvideot") ? (req.body.shortVideoCount || null) : null,
+      shortVideoContractMonths: services.includes("lyhytvideot") && req.body.shortVideoFrequency === "säännöllinen" ? (req.body.shortVideoContractMonths || null) : null,
+      shortVideoRights: services.includes("lyhytvideot") ? (req.body.shortVideoRights || null) : null,
+      shortVideoStyle: services.includes("lyhytvideot") ? (req.body.shortVideoStyle || []) : null,
+      shortVideoDetails: services.includes("lyhytvideot") ? (req.body.shortVideoDetails ? req.body.shortVideoDetails.trim() : null) : null,
+      
+      editingSource: services.includes("editointi") ? (req.body.editingSource || []) : null,
+      editingFormat: services.includes("editointi") ? (req.body.editingFormat || []) : null,
+      editingDetails: services.includes("editointi") ? (req.body.editingDetails ? req.body.editingDetails.trim() : null) : null,
+      
+      // Description & References
       description: description.trim(),
-      budget_min: minBudget,
-      budget_max: maxBudget,
-      status: req.body.status || "open",
+      referenceLinks: req.body.referenceLinks || [],
+      attachments: req.body.attachments || [],
+      
+      // Metadata
+      status: "open",
+      createdAt: new Date().toISOString(),
+      expiresAt: req.body.expiresAt || null, // Should be set to 90 days from now
     };
 
     await ddb.send(
@@ -91,10 +184,29 @@ router.get("/api/jobs", authenticateToken, async (req, res) => {
     );
 
     const jobs = result.Items || [];
+    
+    // Filter out expired jobs and mark them as expired
+    const now = new Date();
+    const processedJobs = jobs.map((job) => {
+      if (job.expiresAt) {
+        const expiresAt = new Date(job.expiresAt);
+        if (expiresAt < now && job.status === "open") {
+          // Mark as expired (could update in DB, but for now just filter)
+          return { ...job, status: "expired" };
+        }
+      }
+      return job;
+    });
+
+    // Filter out expired jobs for photographers, but show them to customers
+    const currentUser = req.user;
+    const filteredJobs = currentUser.userType === "customer"
+      ? processedJobs
+      : processedJobs.filter((job) => job.status !== "expired");
 
     res.status(200).json({
       success: true,
-      jobs,
+      jobs: filteredJobs,
     });
   } catch (error) {
     console.error("Error fetching jobs:", error);
@@ -451,11 +563,21 @@ router.get("/api/my-bids", authenticateToken, async (req, res) => {
         job: job
           ? {
               id: job.id || job.jobId,
-              title: job.title,
+              title: job.title || job.description?.substring(0, 50) || "Job",
               description: job.description,
-              budget_min: job.budget_min,
-              budget_max: job.budget_max,
+              budgetMin: job.budgetMin,
+              budgetMax: job.budgetMax,
+              budgetUnknown: job.budgetUnknown || false,
+              budget_min: job.budgetMin || job.budget_min, // Backward compatibility
+              budget_max: job.budgetMax || job.budget_max, // Backward compatibility
               status: job.status,
+              services: job.services || [],
+              city: job.city,
+              area: job.area,
+              duration: job.duration,
+              difficulty: job.difficulty,
+              date: job.date,
+              dateRange: job.dateRange,
             }
           : null,
       };
@@ -924,6 +1046,61 @@ router.get("/api/photographer-profile/:photographerId", authenticateToken, async
     });
   } catch (error) {
     console.error("Error fetching photographer profile for customer:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a job (customers only, only their own jobs)
+router.delete("/api/job/:jobId", authenticateToken, async (req, res) => {
+  try {
+    // Authorization: Only customers can delete jobs
+    if (req.user.userType !== "customer") {
+      return res.status(403).json({ error: "Only customers can delete jobs" });
+    }
+
+    const { jobId } = req.params;
+    const customerId = req.user.uid;
+
+    // First, verify the job exists and belongs to this customer
+    const getResult = await ddb.send(
+      new GetCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          id: jobId
+        }
+      })
+    );
+
+    const job = getResult.Item;
+
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    if (job.entryType !== "job") {
+      return res.status(400).json({ error: "Invalid job ID" });
+    }
+
+    if (job.customerId !== customerId) {
+      return res.status(403).json({ error: "You can only delete your own jobs" });
+    }
+
+    // Delete the job
+    await ddb.send(
+      new DeleteCommand({
+        TableName: TABLE_NAME,
+        Key: {
+          id: jobId
+        }
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Job deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting job:", error);
     res.status(500).json({ error: error.message });
   }
 });
