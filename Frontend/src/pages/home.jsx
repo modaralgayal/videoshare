@@ -1,190 +1,140 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { connectToBackend, getUser } from "../controllers/user";
+import { getUser } from "../controllers/user";
+import { colors, shadow, radius, card } from "../styles/theme";
+
+const ActionCard = ({ title, description, cta, onClick, accent }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        ...card,
+        cursor: "pointer",
+        transition: "transform 0.15s, box-shadow 0.15s",
+        transform: hovered ? "translateY(-3px)" : "translateY(0)",
+        boxShadow: hovered ? shadow.md : shadow.sm,
+        borderTop: `3px solid ${accent || colors.primary}`,
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.5rem",
+      }}
+    >
+      <h3 style={{ fontSize: "16px", color: colors.text }}>{title}</h3>
+      <p style={{ fontSize: "13px", color: colors.textSecondary, lineHeight: "1.6", flex: 1 }}>{description}</p>
+      <span
+        style={{
+          marginTop: "0.75rem",
+          fontSize: "13px",
+          fontWeight: "600",
+          color: accent || colors.primary,
+        }}
+      >
+        {cta} →
+      </span>
+    </div>
+  );
+};
 
 export const Home = () => {
-  const [error, setError] = useState("");
-  const [answer, setAnswer] = useState("");
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is authenticated
     const currentUser = getUser();
     if (currentUser) {
       setUser(currentUser);
     } else {
-      // If not authenticated, redirect to sign in
       navigate("/signin");
-      return;
     }
-
-    connectToBackend()
-      .then((res) => {
-        console.log(res);
-        setAnswer(res);
-      })
-      .catch((err) => {
-        console.error(err);
-      });
   }, [navigate]);
 
-  // Show loading or redirect if no user
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   const isPhotographer = user.userType === "photographer";
   const isCustomer = user.userType === "customer";
+  const firstName = user.name?.split(" ")[0] || user.email;
 
   return (
-    <>
-      <div style={{ padding: "20px" }}>
-        <h1 style={{ color: "#0F172A" }}>Welcome, {user.name || user.email}!</h1>
+    <div style={{ backgroundColor: colors.bgPage, minHeight: "100%", padding: "2.5rem 1.5rem" }}>
+      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
 
-        {error && <div style={{ color: "#721c24", backgroundColor: "#f8d7da", padding: "10px", borderRadius: "5px", marginBottom: "1rem" }}>{error}</div>}
+        {/* Welcome header */}
+        <div style={{ marginBottom: "2.5rem" }}>
+          <h1 style={{ fontSize: "26px", color: colors.text, fontWeight: "700", marginBottom: "0.375rem" }}>
+            Welcome back, {firstName}
+          </h1>
+          <p style={{ color: colors.textSecondary, fontSize: "15px" }}>
+            {isPhotographer
+              ? "Find new projects and manage your bids."
+              : "Post jobs and find the right photographer for your project."}
+          </p>
+        </div>
+
+        {/* Action cards */}
         {isPhotographer && (
-          <div style={{ backgroundColor: "#FFFFFF", padding: "2rem", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", marginTop: "1rem" }}>
-            <h2 style={{ color: "#0F172A" }}>Photographer Dashboard</h2>
-            <p style={{ color: "#475569" }}>Welcome to your photographer dashboard! Here you can:</p>
-            <ul>
-              <li>View and manage your job applications</li>
-              <li>Browse available jobs</li>
-              <li>Update your portfolio</li>
-              <li>Manage your profile settings</li>
-            </ul>
-            <div style={{ marginTop: "20px" }}>
-              <button 
-                onClick={() => navigate("/jobs")}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#1E3A8A",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  marginRight: "10px",
-                  fontSize: "16px"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
-              >
-                Browse Available Jobs
-              </button>
-              <button 
-                onClick={() => navigate("/my-bids")}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#1E3A8A",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  marginRight: "10px",
-                  fontSize: "16px"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
-              >
-                My Bids
-              </button>
-              <button 
-                onClick={() => navigate("/portfolio")}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#1E3A8A",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  fontSize: "16px"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
-              >
-                Portfolio
-              </button>
-            </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.25rem" }}>
+            <ActionCard
+              title="Browse Jobs"
+              description="Explore available photography and videography projects posted by customers."
+              cta="View jobs"
+              onClick={() => navigate("/jobs")}
+              accent={colors.primary}
+            />
+            <ActionCard
+              title="My Bids"
+              description="Track the status of all your submitted bids and see customer responses."
+              cta="View bids"
+              onClick={() => navigate("/my-bids")}
+              accent="#7C3AED"
+            />
+            <ActionCard
+              title="Portfolio"
+              description="Showcase your best work. Upload photos and videos to attract more clients."
+              cta="Manage portfolio"
+              onClick={() => navigate("/portfolio")}
+              accent={colors.accent}
+            />
+            <ActionCard
+              title="Profile"
+              description="Keep your profile up to date — services, pricing, equipment, and availability."
+              cta="Edit profile"
+              onClick={() => navigate("/photographer-profile")}
+              accent="#059669"
+            />
           </div>
         )}
 
         {isCustomer && (
-          <div style={{ backgroundColor: "#FFFFFF", padding: "2rem", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", marginTop: "1rem" }}>
-            <h2 style={{ color: "#0F172A" }}>Customer Dashboard</h2>
-            <p style={{ color: "#475569" }}>Welcome to your customer dashboard! Here you can:</p>
-            <ul>
-              <li>Post new job listings</li>
-              <li>View your posted jobs</li>
-              <li>Manage applications from photographers</li>
-              <li>Review photographer profiles</li>
-            </ul>
-            <div style={{ marginTop: "20px" }}>
-              <button 
-                onClick={() => navigate("/jobs")}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#1E3A8A",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  marginRight: "10px",
-                  fontSize: "16px"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
-              >
-                View My Jobs
-              </button>
-              <button 
-                onClick={() => navigate("/post-job")}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#F59E0B",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  marginRight: "10px",
-                  fontSize: "16px",
-                  fontWeight: "600"
-                }}
-              >
-                Post New Job
-              </button>
-              <button 
-                onClick={() => navigate("/view-bids")}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#1E3A8A",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "5px",
-                  cursor: "pointer",
-                  fontSize: "16px"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
-              >
-                View Bids
-              </button>
-            </div>
-          </div>
-        )}
-
-        {!isPhotographer && !isCustomer && (
-          <div>
-            <h2>Welcome!</h2>
-            <p>Your account type is not set. Please contact support.</p>
-          </div>
-        )}
-
-        {answer && (
-          <div style={{ marginTop: "20px", padding: "10px", backgroundColor: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "5px" }}>
-            <p style={{ color: "#475569" }}>Backend connection: {answer}</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1.25rem" }}>
+            <ActionCard
+              title="Post a Job"
+              description="Describe your photography needs and receive competitive bids from professionals."
+              cta="Post now"
+              onClick={() => navigate("/post-job")}
+              accent={colors.accent}
+            />
+            <ActionCard
+              title="My Jobs"
+              description="View all your active job postings and manage your requests."
+              cta="View jobs"
+              onClick={() => navigate("/jobs")}
+              accent={colors.primary}
+            />
+            <ActionCard
+              title="Bids Received"
+              description="Review bids from photographers, compare proposals and accept the best offer."
+              cta="View bids"
+              onClick={() => navigate("/view-bids")}
+              accent="#7C3AED"
+            />
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 };
+
+export default Home;

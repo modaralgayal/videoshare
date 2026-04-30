@@ -2,6 +2,133 @@ import { useEffect, useState } from "react";
 import { fetchJobs, deleteJob } from "../controllers/jobs";
 import { getUser } from "../controllers/user";
 import { useNavigate } from "react-router-dom";
+import { colors, shadow, radius, badge, btn } from "../styles/theme";
+
+const SERVICE_LABELS = {
+  valokuvat: "Photos",
+  videotuotanto: "Video Production",
+  dronekuvat: "Drone Photos",
+  dronevideo: "Drone Video",
+  lyhytvideot: "Short Videos",
+  editointi: "Editing Only",
+};
+
+const DIFFICULTY_LABELS = {
+  perus: "Basic",
+  keskitaso: "Intermediate",
+  vaativa: "Advanced",
+};
+
+const formatDate = (d) => d ? new Date(d).toLocaleDateString("fi-FI", { year: "numeric", month: "short", day: "numeric" }) : "Not set";
+const formatDateRange = (r) => {
+  if (!r?.start) return "Not set";
+  const s = formatDate(r.start);
+  return r.end ? `${s} – ${formatDate(r.end)}` : s;
+};
+
+const JobCard = ({ job, isPhotographer, isCustomer, onBid, onDelete, deleting }) => {
+  const [hovered, setHovered] = useState(false);
+  const id = job.id || job.jobId;
+
+  const statusVariant = job.status === "open" ? "success" : job.status === "accepted" ? "default" : "muted";
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        backgroundColor: colors.bgCard,
+        border: `1px solid ${colors.border}`,
+        borderRadius: radius.lg,
+        padding: "1.5rem",
+        boxShadow: hovered ? shadow.md : shadow.sm,
+        transition: "box-shadow 0.15s, transform 0.15s",
+        transform: hovered ? "translateY(-2px)" : "none",
+      }}
+    >
+      {/* Services */}
+      {job.services?.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem", marginBottom: "1rem" }}>
+          {job.services.map((s) => (
+            <span key={s} style={badge("default")}>{SERVICE_LABELS[s] || s}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Description */}
+      <p style={{ color: colors.textSecondary, fontSize: "14px", lineHeight: "1.65", marginBottom: "1.25rem", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+        {job.description}
+      </p>
+
+      {/* Info grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "0.5rem 1.5rem", marginBottom: "1.25rem" }}>
+        <InfoRow label="Location" value={`${job.city}${job.area ? `, ${job.area}` : ""} · ${job.radius} km`} />
+        <InfoRow label="Date" value={job.date ? formatDate(job.date) : formatDateRange(job.dateRange)} />
+        <InfoRow label="Duration" value={job.duration || "Not set"} />
+        <InfoRow
+          label="Budget"
+          value={
+            job.budgetUnknown ? "Unspecified"
+            : job.budgetMin && job.budgetMax ? `€${job.budgetMin.toLocaleString()} – €${job.budgetMax.toLocaleString()}`
+            : "Not set"
+          }
+        />
+        <InfoRow label="Difficulty" value={DIFFICULTY_LABELS[job.difficulty] || job.difficulty || "Not set"} />
+      </div>
+
+      {/* Footer */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "1rem", borderTop: `1px solid ${colors.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <span style={badge(statusVariant)}>
+            {job.status === "open" ? "Open" : job.status === "accepted" ? "Accepted" : job.status}
+          </span>
+          {job.expiresAt && (
+            <span style={{ color: colors.textMuted, fontSize: "12px" }}>
+              Expires {formatDate(job.expiresAt)}
+            </span>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          {isPhotographer && job.status === "open" && (
+            <button
+              onClick={onBid}
+              style={{ ...btn.accent, fontSize: "13px", padding: "0.5rem 1rem" }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.accentHover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.accent}
+            >
+              Make a Bid
+            </button>
+          )}
+          {isCustomer && (
+            <button
+              onClick={onDelete}
+              disabled={deleting}
+              style={{
+                ...btn.danger,
+                fontSize: "13px",
+                padding: "0.5rem 1rem",
+                opacity: deleting ? 0.6 : 1,
+                cursor: deleting ? "not-allowed" : "pointer",
+              }}
+              onMouseEnter={(e) => { if (!deleting) e.currentTarget.style.backgroundColor = "#B91C1C"; }}
+              onMouseLeave={(e) => { if (!deleting) e.currentTarget.style.backgroundColor = colors.error; }}
+            >
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const InfoRow = ({ label, value }) => (
+  <div>
+    <span style={{ fontSize: "11px", fontWeight: "600", color: colors.textMuted, textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</span>
+    <p style={{ fontSize: "13px", color: colors.text, marginTop: "0.125rem" }}>{value}</p>
+  </div>
+);
 
 export const Jobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -13,392 +140,116 @@ export const Jobs = () => {
   const isPhotographer = user?.userType === "photographer";
   const isCustomer = user?.userType === "customer";
 
-  useEffect(() => {
-    const loadJobs = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const data = await fetchJobs();
-        // Filter out expired jobs
-        const now = new Date();
-        const activeJobs = data.filter((job) => {
-          if (job.status === "expired") return false;
-          if (job.expiresAt) {
-            const expiresAt = new Date(job.expiresAt);
-            if (expiresAt < now) {
-              return false;
-            }
-          }
-          return true;
-        });
-        setJobs(activeJobs);
-      } catch (err) {
-        setError(err.message || "Failed to load jobs.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadJobs();
-  }, []);
-
-  const handleDeleteJob = async (jobId) => {
-    if (!window.confirm("Are you sure you want to delete this job request? This action cannot be undone.")) {
-      return;
-    }
-
+  const loadJobs = async () => {
     try {
-      setDeleting((prev) => ({ ...prev, [jobId]: true }));
+      setLoading(true);
       setError("");
-      await deleteJob(jobId);
-      // Reload jobs after deletion
       const data = await fetchJobs();
       const now = new Date();
-      const activeJobs = data.filter((job) => {
-        if (job.status === "expired") return false;
-        if (job.expiresAt) {
-          const expiresAt = new Date(job.expiresAt);
-          if (expiresAt < now) {
-            return false;
-          }
-        }
-        return true;
-      });
-      setJobs(activeJobs);
+      setJobs(data.filter((j) => j.status !== "expired" && (!j.expiresAt || new Date(j.expiresAt) >= now)));
     } catch (err) {
-      setError(err.message || "Failed to delete job. Please try again.");
+      setError(err.message || "Failed to load jobs.");
     } finally {
-      setDeleting((prev) => ({ ...prev, [jobId]: false }));
+      setLoading(false);
     }
   };
 
-  const headingText = isPhotographer
-    ? "Available Jobs"
-    : isCustomer
-    ? "Your Job Postings"
-    : "Job Postings";
+  useEffect(() => { loadJobs(); }, []);
 
-  const filteredJobs =
-    isCustomer && user?.uid
-      ? jobs.filter((job) => job.customerId === user.uid)
-      : jobs;
-
-  const formatDate = (dateString) => {
-    if (!dateString) return "Not set";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fi-FI", { year: "numeric", month: "long", day: "numeric" });
-  };
-
-  const formatDateRange = (dateRange) => {
-    if (!dateRange || !dateRange.start) return "Not set";
-    const start = new Date(dateRange.start);
-    const end = dateRange.end ? new Date(dateRange.end) : null;
-    const startStr = start.toLocaleDateString("fi-FI", { year: "numeric", month: "long", day: "numeric" });
-    if (end) {
-      const endStr = end.toLocaleDateString("fi-FI", { year: "numeric", month: "long", day: "numeric" });
-      return `${startStr} - ${endStr}`;
+  const handleDelete = async (jobId) => {
+    if (!window.confirm("Delete this job request? This cannot be undone.")) return;
+    setDeleting((p) => ({ ...p, [jobId]: true }));
+    try {
+      await deleteJob(jobId);
+      await loadJobs();
+    } catch (err) {
+      setError(err.message || "Failed to delete job.");
+    } finally {
+      setDeleting((p) => ({ ...p, [jobId]: false }));
     }
-    return startStr;
   };
 
-  const getServiceLabel = (service) => {
-    const labels = {
-      valokuvat: "Photos",
-      videotuotanto: "Video Production",
-      dronekuvat: "Drone Photos",
-      dronevideo: "Drone Video",
-      lyhytvideot: "Short Videos",
-      editointi: "Editing Only",
-    };
-    return labels[service] || service;
-  };
-
-  const getDifficultyLabel = (difficulty) => {
-    const labels = {
-      perus: "Basic",
-      keskitaso: "Intermediate",
-      vaativa: "Advanced",
-    };
-    return labels[difficulty] || difficulty;
-  };
+  const filteredJobs = isCustomer && user?.uid ? jobs.filter((j) => j.customerId === user.uid) : jobs;
+  const heading = isPhotographer ? "Available Jobs" : isCustomer ? "Your Job Postings" : "Job Postings";
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "2rem auto", padding: "0 1rem" }}>
-      <h2 style={{ color: "#0F172A", marginBottom: "1rem" }}>{headingText}</h2>
+    <div style={{ backgroundColor: colors.bgPage, minHeight: "100%", padding: "2.5rem 1.5rem" }}>
+      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
 
-      {loading && <p style={{ color: "#475569" }}>Loading jobs...</p>}
-
-      {error && (
-        <div
-          style={{
-            backgroundColor: "#f8d7da",
-            color: "#721c24",
-            padding: "1rem",
-            borderRadius: "5px",
-            marginBottom: "1rem",
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {!loading && !error && filteredJobs.length === 0 && (
-        <p style={{ color: "#475569" }}>No jobs found.</p>
-      )}
-
-      {!loading && !error && filteredJobs.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          {filteredJobs.map((job) => (
-            <div
-              key={job.id || job.jobId}
-              style={{
-                border: "1px solid #E2E8F0",
-                borderRadius: "8px",
-                padding: "1.5rem",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                backgroundColor: "#FFFFFF",
-              }}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+          <div>
+            <h1 style={{ fontSize: "24px", color: colors.text, marginBottom: "0.25rem" }}>{heading}</h1>
+            {!loading && (
+              <p style={{ fontSize: "13px", color: colors.textMuted }}>
+                {filteredJobs.length} {filteredJobs.length === 1 ? "job" : "jobs"} found
+              </p>
+            )}
+          </div>
+          {isCustomer && (
+            <button
+              onClick={() => navigate("/post-job")}
+              style={{ ...btn.accent, padding: "0.625rem 1.25rem" }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.accentHover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.accent}
             >
-              {/* Services */}
-              {job.services && job.services.length > 0 && (
-                <div style={{ marginBottom: "1rem" }}>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                    {job.services.map((service) => (
-                      <span
-                        key={service}
-                        style={{
-                          padding: "0.25rem 0.75rem",
-                          backgroundColor: "#EFF6FF",
-                          color: "#1E3A8A",
-                          borderRadius: "20px",
-                          fontSize: "12px",
-                          fontWeight: "500",
-                        }}
-                      >
-                        {getServiceLabel(service)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Location */}
-              <div style={{ marginBottom: "0.75rem" }}>
-                <p style={{ color: "#475569", fontSize: "14px", margin: "0.25rem 0" }}>
-                  <strong style={{ color: "#0F172A" }}>Location:</strong> {job.city}
-                  {job.area && `, ${job.area}`}
-                  {job.radius && ` (${job.radius} km radius)`}
-                  {job.allowFurther && " • Can offer from further away"}
-                </p>
-              </div>
-
-              {/* Date & Duration */}
-              <div style={{ marginBottom: "0.75rem" }}>
-                <p style={{ color: "#475569", fontSize: "14px", margin: "0.25rem 0" }}>
-                  <strong style={{ color: "#0F172A" }}>Date:</strong>{" "}
-                  {job.date
-                    ? formatDate(job.date)
-                    : job.dateRange
-                    ? formatDateRange(job.dateRange)
-                    : "Not set"}
-                  {job.dateNotLocked && " (Not locked)"}
-                </p>
-                <p style={{ color: "#475569", fontSize: "14px", margin: "0.25rem 0" }}>
-                  <strong style={{ color: "#0F172A" }}>Duration:</strong> {job.duration || "Not set"}
-                </p>
-              </div>
-
-              {/* Budget */}
-              <div style={{ marginBottom: "0.75rem" }}>
-                <p style={{ color: "#475569", fontSize: "14px", margin: "0.25rem 0" }}>
-                  <strong style={{ color: "#0F172A" }}>Budget:</strong>{" "}
-                  {job.budgetUnknown
-                    ? "I don't know"
-                    : job.budgetMin && job.budgetMax
-                    ? `€${job.budgetMin.toLocaleString()} - €${job.budgetMax.toLocaleString()}`
-                    : "Not set"}
-                </p>
-              </div>
-
-              {/* Difficulty & Priority */}
-              <div style={{ marginBottom: "0.75rem" }}>
-                <p style={{ color: "#475569", fontSize: "14px", margin: "0.25rem 0" }}>
-                  <strong style={{ color: "#0F172A" }}>Difficulty:</strong>{" "}
-                  {job.difficulty ? getDifficultyLabel(job.difficulty) : "Not set"}
-                  {job.difficultyDetails && ` - ${job.difficultyDetails}`}
-                </p>
-                {job.priority && job.priority.length > 0 && (
-                  <p style={{ color: "#475569", fontSize: "14px", margin: "0.25rem 0" }}>
-                    <strong style={{ color: "#0F172A" }}>Priority:</strong>{" "}
-                    {job.priority.join(", ")}
-                  </p>
-                )}
-              </div>
-
-              {/* Preferred Profile */}
-              {job.preferredProfile && (
-                <div style={{ marginBottom: "0.75rem" }}>
-                  <p style={{ color: "#475569", fontSize: "14px", margin: "0.25rem 0" }}>
-                    <strong style={{ color: "#0F172A" }}>Preferred Profile:</strong>{" "}
-                    {job.preferredProfile === "solo"
-                      ? "Solo"
-                      : job.preferredProfile === "2-3"
-                      ? "2-3 people"
-                      : job.preferredProfile === "tuotantoyhtiö"
-                      ? "Production Company"
-                      : "No preference"}
-                  </p>
-                </div>
-              )}
-
-              {/* Description */}
-              <div style={{ marginBottom: "1rem", padding: "1rem", backgroundColor: "#F8FAFC", borderRadius: "5px" }}>
-                <p style={{ color: "#475569", fontSize: "14px", lineHeight: "1.6", whiteSpace: "pre-wrap", margin: 0 }}>
-                  {job.description}
-                </p>
-              </div>
-
-              {/* Service-specific details */}
-              {job.services && job.services.includes("valokuvat") && job.photoSubjects && (
-                <div style={{ marginBottom: "0.75rem", padding: "0.75rem", backgroundColor: "#F8FAFC", borderRadius: "5px" }}>
-                  <p style={{ color: "#0F172A", fontSize: "13px", fontWeight: "600", margin: "0 0 0.5rem 0" }}>
-                    Photos:
-                  </p>
-                  <p style={{ color: "#475569", fontSize: "13px", margin: "0.25rem 0" }}>
-                    Subjects: {Array.isArray(job.photoSubjects) ? job.photoSubjects.join(", ") : job.photoSubjects}
-                  </p>
-                  {job.photoCount && (
-                    <p style={{ color: "#475569", fontSize: "13px", margin: "0.25rem 0" }}>
-                      Count: {job.photoCount}
-                    </p>
-                  )}
-                  {job.photoEditing && (
-                    <p style={{ color: "#475569", fontSize: "13px", margin: "0.25rem 0" }}>
-                      Editing: {job.photoEditing}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {job.services && job.services.includes("videotuotanto") && job.videoFormat && (
-                <div style={{ marginBottom: "0.75rem", padding: "0.75rem", backgroundColor: "#F8FAFC", borderRadius: "5px" }}>
-                  <p style={{ color: "#0F172A", fontSize: "13px", fontWeight: "600", margin: "0 0 0.5rem 0" }}>
-                    Video Production:
-                  </p>
-                  {job.videoFormat && Array.isArray(job.videoFormat) && job.videoFormat.length > 0 && (
-                    <p style={{ color: "#475569", fontSize: "13px", margin: "0.25rem 0" }}>
-                      Format: {job.videoFormat.join(", ")}
-                    </p>
-                  )}
-                  {job.videoLength && (
-                    <p style={{ color: "#475569", fontSize: "13px", margin: "0.25rem 0" }}>
-                      Length: {job.videoLength}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Reference Links */}
-              {job.referenceLinks && job.referenceLinks.length > 0 && (
-                <div style={{ marginBottom: "0.75rem" }}>
-                  <p style={{ color: "#0F172A", fontSize: "13px", fontWeight: "600", margin: "0 0 0.5rem 0" }}>
-                    Reference Links:
-                  </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                    {job.referenceLinks.map((link, index) => (
-                      <a
-                        key={index}
-                        href={link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: "#1E3A8A",
-                          fontSize: "13px",
-                          textDecoration: "none",
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-                        onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
-                      >
-                        {link}
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Status & Actions */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #E2E8F0" }}>
-                <div>
-                  <span
-                    style={{
-                      padding: "0.25rem 0.75rem",
-                      backgroundColor:
-                        job.status === "open"
-                          ? "#D1FAE5"
-                          : job.status === "accepted"
-                          ? "#DBEAFE"
-                          : "#FEE2E2",
-                      color:
-                        job.status === "open"
-                          ? "#065F46"
-                          : job.status === "accepted"
-                          ? "#1E40AF"
-                          : "#991B1B",
-                      borderRadius: "20px",
-                      fontSize: "12px",
-                      fontWeight: "500",
-                    }}
-                  >
-                    {job.status === "open" ? "Open" : job.status === "accepted" ? "Accepted" : job.status}
-                  </span>
-                  {job.expiresAt && (
-                    <span style={{ color: "#64748B", fontSize: "12px", marginLeft: "0.5rem" }}>
-                      Expires: {formatDate(job.expiresAt)}
-                    </span>
-                  )}
-                </div>
-
-                {isPhotographer && job.status === "open" && (
-                  <button
-                    style={{
-                      padding: "0.5rem 1rem",
-                      backgroundColor: "#F59E0B",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "5px",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                      fontWeight: "600",
-                    }}
-                    onClick={() => navigate("/make-bid", { state: { job } })}
-                  >
-                    Make a Bid
-                  </button>
-                )}
-
-                {isCustomer && (
-                  <button
-                    style={{
-                      padding: "0.5rem 1rem",
-                      backgroundColor: deleting[job.id || job.jobId] ? "#94A3B8" : "#EF4444",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "5px",
-                      cursor: deleting[job.id || job.jobId] ? "not-allowed" : "pointer",
-                      fontSize: "14px",
-                      opacity: deleting[job.id || job.jobId] ? 0.6 : 1,
-                    }}
-                    onClick={() => handleDeleteJob(job.id || job.jobId)}
-                    disabled={deleting[job.id || job.jobId]}
-                  >
-                    {deleting[job.id || job.jobId] ? "Deleting..." : "Delete Request"}
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+              + Post a Job
+            </button>
+          )}
         </div>
-      )}
+
+        {error && (
+          <div style={{ backgroundColor: "#FEE2E2", color: "#991B1B", padding: "0.875rem 1rem", borderRadius: radius.sm, marginBottom: "1.5rem", fontSize: "14px" }}>
+            {error}
+          </div>
+        )}
+
+        {loading && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {[1, 2, 3].map((i) => (
+              <div key={i} style={{ height: "200px", backgroundColor: colors.bgCard, borderRadius: radius.lg, border: `1px solid ${colors.border}` }} />
+            ))}
+          </div>
+        )}
+
+        {!loading && filteredJobs.length === 0 && (
+          <div style={{ textAlign: "center", padding: "4rem 2rem", backgroundColor: colors.bgCard, borderRadius: radius.lg, border: `1px solid ${colors.border}` }}>
+            <p style={{ color: colors.textMuted, fontSize: "15px", marginBottom: "1.5rem" }}>
+              {isCustomer ? "You haven't posted any jobs yet." : "No jobs available right now."}
+            </p>
+            {isCustomer && (
+              <button
+                onClick={() => navigate("/post-job")}
+                style={{ ...btn.accent }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.accentHover}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.accent}
+              >
+                Post your first job
+              </button>
+            )}
+          </div>
+        )}
+
+        {!loading && filteredJobs.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {filteredJobs.map((job) => {
+              const id = job.id || job.jobId;
+              return (
+                <JobCard
+                  key={id}
+                  job={job}
+                  isPhotographer={isPhotographer}
+                  isCustomer={isCustomer}
+                  onBid={() => navigate("/make-bid", { state: { job } })}
+                  onDelete={() => handleDelete(id)}
+                  deleting={!!deleting[id]}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
+
+export default Jobs;

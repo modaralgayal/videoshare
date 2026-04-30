@@ -2,33 +2,29 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchBidsForCustomer, updateBidStatus } from "../controllers/jobs";
 import { getUser, isAuthenticated } from "../controllers/user";
+import { colors, shadow, radius, badge, btn } from "../styles/theme";
+
+const statusVariant = (s) => s === "accepted" ? "success" : s === "rejected" ? "error" : "warning";
+const statusLabel = (s) => s === "accepted" ? "Accepted" : s === "rejected" ? "Rejected" : "Pending";
 
 export const ViewBids = () => {
   const navigate = useNavigate();
   const [user] = useState(() => getUser());
-
   const [bids, setBids] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updating, setUpdating] = useState({});
 
-  // Redirect if not authenticated or not a customer
   useEffect(() => {
-    if (!isAuthenticated() || !user || user.userType !== "customer") {
-      navigate("/signin");
-    }
+    if (!isAuthenticated() || !user || user.userType !== "customer") navigate("/signin");
   }, [navigate, user]);
 
   const loadBids = useCallback(async () => {
-    if (!user || user.userType !== "customer" || !user.uid) {
-      setLoading(false);
-      return;
-    }
-
+    if (!user || user.userType !== "customer") { setLoading(false); return; }
     try {
       setLoading(true);
       setError("");
-      const data = await fetchBidsForCustomer();
-      setBids(data);
+      setBids(await fetchBidsForCustomer());
     } catch (err) {
       setError(err.message || "Failed to load bids.");
     } finally {
@@ -36,241 +32,157 @@ export const ViewBids = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    loadBids();
-  }, [loadBids]);
+  useEffect(() => { loadBids(); }, [loadBids]);
 
-  const handleBidStatusUpdate = async (bidId, status) => {
+  const handleStatusUpdate = async (bidId, status) => {
+    setUpdating((p) => ({ ...p, [bidId]: status }));
     try {
       await updateBidStatus(bidId, status);
-      // Reload bids to get updated status
       await loadBids();
     } catch (err) {
-      setError(err.message || `Failed to ${status} bid. Please try again.`);
+      setError(err.message || `Failed to ${status} bid.`);
+    } finally {
+      setUpdating((p) => ({ ...p, [bidId]: null }));
     }
   };
 
-  if (!user || user.userType !== "customer") {
-    return null;
-  }
+  if (!user || user.userType !== "customer") return null;
 
   return (
-    <div style={{ maxWidth: "1000px", margin: "2rem auto", padding: "0 1rem" }}>
-      <h1 style={{ color: "#0F172A" }}>Bids Received</h1>
+    <div style={{ backgroundColor: colors.bgPage, minHeight: "100%", padding: "2.5rem 1.5rem" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
 
-      {loading && <p style={{ color: "#475569" }}>Loading bids...</p>}
-
-      {error && (
-        <div
-          style={{
-            backgroundColor: "#f8d7da",
-            color: "#721c24",
-            padding: "1rem",
-            borderRadius: "5px",
-            marginBottom: "1rem",
-          }}
-        >
-          {error}
+        <div style={{ marginBottom: "2rem" }}>
+          <h1 style={{ fontSize: "24px", color: colors.text, marginBottom: "0.25rem" }}>Bids Received</h1>
+          {!loading && (
+            <p style={{ fontSize: "13px", color: colors.textMuted }}>
+              {bids.length} {bids.length === 1 ? "bid" : "bids"} received
+            </p>
+          )}
         </div>
-      )}
 
-      {!loading && !error && bids.length === 0 && (
-        <div
-          style={{
-            padding: "2rem",
-            textAlign: "center",
-            backgroundColor: "#FFFFFF",
-            border: "1px solid #E2E8F0",
-            borderRadius: "5px",
-          }}
-        >
-          <p style={{ color: "#475569" }}>No bids received yet.</p>
-          <button
-            onClick={() => navigate("/post-job")}
-            style={{
-              marginTop: "1rem",
-              padding: "0.75rem 1.5rem",
-              backgroundColor: "#F59E0B",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer",
-              fontSize: "16px",
-              fontWeight: "600",
-            }}
-          >
-            Post a Job
-          </button>
-        </div>
-      )}
+        {error && (
+          <div style={{ backgroundColor: "#FEE2E2", color: "#991B1B", padding: "0.875rem 1rem", borderRadius: radius.sm, marginBottom: "1.5rem", fontSize: "14px" }}>
+            {error}
+          </div>
+        )}
 
-      {!loading && !error && bids.length > 0 && (
-        <div style={{ marginTop: "2rem" }}>
-          {bids.map((bid) => (
-            <div
-              key={bid.id || bid.bidId}
-              style={{
-                border: "1px solid #E2E8F0",
-                borderRadius: "8px",
-                padding: "1.5rem",
-                marginBottom: "1.5rem",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                backgroundColor: "#FFFFFF",
-              }}
+        {loading && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {[1, 2].map((i) => <div key={i} style={{ height: "220px", backgroundColor: colors.bgCard, borderRadius: radius.lg, border: `1px solid ${colors.border}` }} />)}
+          </div>
+        )}
+
+        {!loading && bids.length === 0 && (
+          <div style={{ textAlign: "center", padding: "4rem 2rem", backgroundColor: colors.bgCard, borderRadius: radius.lg, border: `1px solid ${colors.border}` }}>
+            <p style={{ color: colors.textMuted, fontSize: "15px", marginBottom: "1.5rem" }}>No bids received yet. Post a job to start receiving bids.</p>
+            <button
+              onClick={() => navigate("/post-job")}
+              style={btn.accent}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.accentHover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.accent}
             >
-              {/* Job Information */}
-              {bid.job && (
-                <div
-                  style={{
-                    backgroundColor: "#F8FAFC",
-                    padding: "1rem",
-                    borderRadius: "5px",
-                    marginBottom: "1rem",
-                    border: "1px solid #E2E8F0",
-                  }}
-                >
-                  <h3 style={{ marginTop: 0, marginBottom: "0.5rem", color: "#0F172A" }}>
-                    {bid.job.title}
-                  </h3>
-                  <p style={{ margin: 0, color: "#475569", fontSize: "14px" }}>
-                    {bid.job.description}
-                  </p>
-                  <p style={{ margin: "0.5rem 0 0 0", fontSize: "14px", color: "#475569" }}>
-                    <strong>Budget Range:</strong> €{bid.job.budget_min} – €
-                    {bid.job.budget_max}
-                  </p>
-                </div>
-              )}
+              Post a Job
+            </button>
+          </div>
+        )}
 
-              {/* Bid Information */}
-              <div>
+        {!loading && bids.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            {bids.map((bid) => {
+              const id = bid.id || bid.bidId;
+              const isUpdating = !!updating[id];
+              return (
                 <div
+                  key={id}
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    marginBottom: "1rem",
+                    backgroundColor: colors.bgCard,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: radius.lg,
+                    overflow: "hidden",
+                    boxShadow: shadow.sm,
                   }}
                 >
-                  <div>
-                    <h4 style={{ margin: "0 0 0.5rem 0", color: "#0F172A" }}>Bid Details</h4>
-                    <p style={{ margin: "0.5rem 0", fontSize: "18px", color: "#0F172A" }}>
-                      <strong>Price: €{bid.price}</strong>
-                    </p>
-                    <p style={{ margin: "0.5rem 0", color: "#475569" }}>
-                      <strong>Status:</strong>{" "}
-                      <span
-                        style={{
-                          padding: "0.25rem 0.5rem",
-                          borderRadius: "3px",
-                          backgroundColor:
-                            bid.status === "accepted"
-                              ? "#d4edda"
-                              : bid.status === "rejected"
-                              ? "#f8d7da"
-                              : "#fff3cd",
-                          color:
-                            bid.status === "accepted"
-                              ? "#155724"
-                              : bid.status === "rejected"
-                              ? "#721c24"
-                              : "#856404",
-                        }}
-                      >
-                        {bid.status}
-                      </span>
-                    </p>
+                  {/* Job context bar */}
+                  {bid.job && (
+                    <div style={{ backgroundColor: "#F8FAFC", borderBottom: `1px solid ${colors.border}`, padding: "0.875rem 1.5rem" }}>
+                      <p style={{ fontSize: "13px", color: colors.textMuted, marginBottom: "0.25rem", fontWeight: "500", textTransform: "uppercase", letterSpacing: "0.04em" }}>Job</p>
+                      <p style={{ fontSize: "14px", color: colors.text, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                        {bid.job.description}
+                      </p>
+                    </div>
+                  )}
+
+                  <div style={{ padding: "1.5rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem", gap: "1rem" }}>
+                      {/* Photographer info */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <div style={{
+                          width: "40px", height: "40px", borderRadius: "50%",
+                          backgroundColor: "#EFF6FF",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: "14px", fontWeight: "600", color: colors.primary, flexShrink: 0,
+                        }}>
+                          {bid.photographer?.name?.[0] || "P"}
+                        </div>
+                        <div>
+                          <p style={{ fontSize: "14px", fontWeight: "600", color: colors.text }}>{bid.photographer?.name || "Photographer"}</p>
+                          <button
+                            onClick={() => navigate(`/photographer/${bid.videographerId}/profile`)}
+                            style={{ background: "none", border: "none", padding: 0, fontSize: "12px", color: colors.primary, cursor: "pointer" }}
+                          >
+                            View profile →
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Price + status */}
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <p style={{ fontSize: "22px", fontWeight: "700", color: colors.text }}>€{bid.price}</p>
+                        <span style={badge(statusVariant(bid.status))}>{statusLabel(bid.status)}</span>
+                      </div>
+                    </div>
+
+                    {/* Proposal */}
+                    <div style={{ backgroundColor: "#F8FAFC", borderRadius: radius.sm, padding: "1rem", marginBottom: "1.25rem" }}>
+                      <p style={{ fontSize: "12px", fontWeight: "600", color: colors.textMuted, marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Proposal</p>
+                      <p style={{ fontSize: "14px", color: colors.textSecondary, lineHeight: "1.65", whiteSpace: "pre-wrap" }}>{bid.proposal}</p>
+                    </div>
+
+                    {/* Actions */}
+                    {bid.status === "pending" && (
+                      <div style={{ display: "flex", gap: "0.625rem" }}>
+                        <button
+                          onClick={() => handleStatusUpdate(id, "accepted")}
+                          disabled={isUpdating}
+                          style={{ ...btn.accent, opacity: isUpdating ? 0.7 : 1 }}
+                          onMouseEnter={(e) => { if (!isUpdating) e.currentTarget.style.backgroundColor = colors.accentHover; }}
+                          onMouseLeave={(e) => { if (!isUpdating) e.currentTarget.style.backgroundColor = colors.accent; }}
+                        >
+                          {updating[id] === "accepted" ? "Accepting…" : "Accept Bid"}
+                        </button>
+                        <button
+                          onClick={() => handleStatusUpdate(id, "rejected")}
+                          disabled={isUpdating}
+                          style={{ ...btn.ghost, opacity: isUpdating ? 0.7 : 1 }}
+                        >
+                          {updating[id] === "rejected" ? "Rejecting…" : "Reject"}
+                        </button>
+                      </div>
+                    )}
+
+                    {bid.status !== "pending" && (
+                      <p style={{ fontSize: "13px", color: colors.textMuted, fontStyle: "italic" }}>
+                        {bid.status === "accepted" ? "You accepted this bid." : "You rejected this bid."}
+                      </p>
+                    )}
                   </div>
                 </div>
-
-                <div style={{ marginTop: "1rem" }}>
-                  <h4 style={{ marginBottom: "0.5rem", color: "#0F172A" }}>Proposal</h4>
-                  <p
-                    style={{
-                      whiteSpace: "pre-wrap",
-                      lineHeight: "1.6",
-                      color: "#475569",
-                    }}
-                  >
-                    {bid.proposal}
-                  </p>
-                </div>
-
-                <div style={{ marginTop: "1.5rem", display: "flex", gap: "0.5rem" }}>
-                  {bid.status === "pending" && (
-                    <>
-                      <button
-                        onClick={() => handleBidStatusUpdate(bid.id || bid.bidId, "accepted")}
-                        style={{
-                          padding: "0.5rem 1rem",
-                          backgroundColor: "#F59E0B",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "5px",
-                          cursor: "pointer",
-                          fontSize: "14px",
-                          fontWeight: "600",
-                        }}
-                      >
-                        Accept Bid
-                      </button>
-                      <button
-                        onClick={() => handleBidStatusUpdate(bid.id || bid.bidId, "rejected")}
-                        style={{
-                          padding: "0.5rem 1rem",
-                          backgroundColor: "#1E3A8A",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "5px",
-                          cursor: "pointer",
-                          fontSize: "14px",
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
-                      >
-                        Reject Bid
-                      </button>
-                    </>
-                  )}
-                  {bid.status !== "pending" && (
-                    <button
-                      style={{
-                        padding: "0.5rem 1rem",
-                        backgroundColor: "#475569",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "5px",
-                        cursor: "not-allowed",
-                        fontSize: "14px",
-                        opacity: 0.6,
-                      }}
-                      disabled
-                    >
-                      {bid.status === "accepted" ? "Bid Accepted" : "Bid Rejected"}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => navigate(`/photographer/${bid.videographerId}/profile`)}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      backgroundColor: "#1E3A8A",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "5px",
-                      cursor: "pointer",
-                      fontSize: "14px",
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#1D4ED8"}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#1E3A8A"}
-                  >
-                    View Full Profile
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

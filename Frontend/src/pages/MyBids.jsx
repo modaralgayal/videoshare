@@ -2,216 +2,146 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchBidsForPhotographer } from "../controllers/jobs";
 import { getUser, isAuthenticated } from "../controllers/user";
+import { colors, shadow, radius, badge, btn } from "../styles/theme";
+
+const statusVariant = (s) => s === "accepted" ? "success" : s === "rejected" ? "error" : "warning";
+const statusLabel = (s) => s === "accepted" ? "Accepted" : s === "rejected" ? "Rejected" : "Pending";
 
 export const MyBids = () => {
   const navigate = useNavigate();
   const [user] = useState(() => getUser());
-
   const [bids, setBids] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Redirect if not authenticated or not a photographer
   useEffect(() => {
-    if (!isAuthenticated() || !user || user.userType !== "photographer") {
-      navigate("/signin");
-    }
+    if (!isAuthenticated() || !user || user.userType !== "photographer") navigate("/signin");
   }, [navigate, user]);
 
-  const loadBids = async () => {
-    if (!user || user.userType !== "photographer" || !user.uid) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError("");
-      const data = await fetchBidsForPhotographer();
-      setBids(data);
-    } catch (err) {
-      setError(err.message || "Failed to load bids.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadBids();
+    if (!user || user.userType !== "photographer") { setLoading(false); return; }
+    (async () => {
+      try {
+        setLoading(true);
+        setBids(await fetchBidsForPhotographer());
+      } catch (err) {
+        setError(err.message || "Failed to load bids.");
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [user?.uid]);
 
-  if (!user || user.userType !== "photographer") {
-    return null;
-  }
+  if (!user || user.userType !== "photographer") return null;
 
   return (
-    <div style={{ maxWidth: "1000px", margin: "2rem auto", padding: "0 1rem" }}>
-      <h1 style={{ color: "#0F172A" }}>My Bids</h1>
+    <div style={{ backgroundColor: colors.bgPage, minHeight: "100%", padding: "2.5rem 1.5rem" }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
 
-      {loading && <p style={{ color: "#475569" }}>Loading bids...</p>}
-
-      {error && (
-        <div
-          style={{
-            backgroundColor: "#f8d7da",
-            color: "#721c24",
-            padding: "1rem",
-            borderRadius: "5px",
-            marginBottom: "1rem",
-          }}
-        >
-          {error}
+        <div style={{ marginBottom: "2rem" }}>
+          <h1 style={{ fontSize: "24px", color: colors.text, marginBottom: "0.25rem" }}>My Bids</h1>
+          {!loading && (
+            <p style={{ fontSize: "13px", color: colors.textMuted }}>
+              {bids.length} {bids.length === 1 ? "bid" : "bids"} submitted
+            </p>
+          )}
         </div>
-      )}
 
-      {!loading && !error && bids.length === 0 && (
-        <div
-          style={{
-            padding: "2rem",
-            textAlign: "center",
-            backgroundColor: "#FFFFFF",
-            border: "1px solid #E2E8F0",
-            borderRadius: "5px",
-          }}
-        >
-          <p style={{ color: "#475569" }}>You haven't submitted any bids yet.</p>
-          <button
-            onClick={() => navigate("/jobs")}
-            style={{
-              marginTop: "1rem",
-              padding: "0.75rem 1.5rem",
-              backgroundColor: "#F59E0B",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer",
-              fontSize: "16px",
-              fontWeight: "600",
-            }}
-          >
-            Browse Jobs
-          </button>
-        </div>
-      )}
+        {error && (
+          <div style={{ backgroundColor: "#FEE2E2", color: "#991B1B", padding: "0.875rem 1rem", borderRadius: radius.sm, marginBottom: "1.5rem", fontSize: "14px" }}>
+            {error}
+          </div>
+        )}
 
-      {!loading && !error && bids.length > 0 && (
-        <div style={{ marginTop: "2rem" }}>
-          {bids.map((bid) => (
-            <div
-              key={bid.id || bid.bidId}
-              style={{
-                border: "1px solid #E2E8F0",
-                borderRadius: "8px",
-                padding: "1.5rem",
-                marginBottom: "1.5rem",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                backgroundColor: "#FFFFFF",
-              }}
+        {loading && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {[1, 2].map((i) => <div key={i} style={{ height: "200px", backgroundColor: colors.bgCard, borderRadius: radius.lg, border: `1px solid ${colors.border}` }} />)}
+          </div>
+        )}
+
+        {!loading && bids.length === 0 && (
+          <div style={{ textAlign: "center", padding: "4rem 2rem", backgroundColor: colors.bgCard, borderRadius: radius.lg, border: `1px solid ${colors.border}` }}>
+            <p style={{ color: colors.textMuted, fontSize: "15px", marginBottom: "1.5rem" }}>You haven't submitted any bids yet.</p>
+            <button
+              onClick={() => navigate("/jobs")}
+              style={btn.primary}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.primaryHover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.primary}
             >
-              {/* Job Information */}
-              {bid.job && (
+              Browse Jobs
+            </button>
+          </div>
+        )}
+
+        {!loading && bids.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+            {bids.map((bid) => {
+              const id = bid.id || bid.bidId;
+              return (
                 <div
+                  key={id}
                   style={{
-                    backgroundColor: "#F8FAFC",
-                    padding: "1rem",
-                    borderRadius: "5px",
-                    marginBottom: "1rem",
-                    border: "1px solid #E2E8F0",
+                    backgroundColor: colors.bgCard,
+                    border: `1px solid ${bid.status === "accepted" ? "#6EE7B7" : colors.border}`,
+                    borderRadius: radius.lg,
+                    overflow: "hidden",
+                    boxShadow: shadow.sm,
                   }}
                 >
-                  <h3 style={{ marginTop: 0, marginBottom: "0.5rem", color: "#0F172A" }}>
-                    {bid.job.title}
-                  </h3>
-                  <p style={{ margin: 0, color: "#475569", fontSize: "14px" }}>
-                    {bid.job.description}
-                  </p>
-                  <p style={{ margin: "0.5rem 0 0 0", fontSize: "14px", color: "#475569" }}>
-                    <strong>Budget Range:</strong>{" "}
-                    {bid.job.budgetUnknown || (!bid.job.budgetMin && !bid.job.budgetMax && !bid.job.budget_min && !bid.job.budget_max)
-                      ? "I don't know"
-                      : `€${(bid.job.budgetMin || bid.job.budget_min || 0).toLocaleString()} – €${(bid.job.budgetMax || bid.job.budget_max || 0).toLocaleString()}`}
-                  </p>
-                  <p style={{ margin: "0.5rem 0 0 0", fontSize: "14px", color: "#475569" }}>
-                    <strong>Job Status:</strong> {bid.job.status}
-                  </p>
-                </div>
-              )}
-
-              {/* Bid Information */}
-              <div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  <div>
-                    <h4 style={{ margin: "0 0 0.5rem 0", color: "#0F172A" }}>Your Bid</h4>
-                    <p style={{ margin: "0.5rem 0", fontSize: "18px", color: "#0F172A" }}>
-                      <strong>Price: €{bid.price}</strong>
-                    </p>
-                    <p style={{ margin: "0.5rem 0", color: "#475569" }}>
-                      <strong>Bid Status:</strong>{" "}
-                      <span
-                        style={{
-                          padding: "0.25rem 0.5rem",
-                          borderRadius: "3px",
-                          backgroundColor:
-                            bid.status === "accepted"
-                              ? "#d4edda"
-                              : bid.status === "rejected"
-                              ? "#f8d7da"
-                              : "#fff3cd",
-                          color:
-                            bid.status === "accepted"
-                              ? "#155724"
-                              : bid.status === "rejected"
-                              ? "#721c24"
-                              : "#856404",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {bid.status.charAt(0).toUpperCase() + bid.status.slice(1)}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: "1rem" }}>
-                  <h4 style={{ marginBottom: "0.5rem", color: "#0F172A" }}>Your Proposal</h4>
-                  <p
-                    style={{
-                      whiteSpace: "pre-wrap",
-                      lineHeight: "1.6",
-                      color: "#475569",
-                    }}
-                  >
-                    {bid.proposal}
-                  </p>
-                </div>
-
-                {bid.status === "accepted" && bid.customerContact && (bid.customerContact.email || bid.customerContact.phone) && (
-                  <div style={{ marginTop: "1rem", padding: "1rem", backgroundColor: "#D1FAE5", border: "1px solid #6EE7B7", borderRadius: "5px" }}>
-                    <h4 style={{ marginTop: 0, marginBottom: "0.5rem", color: "#065F46" }}>Asiakkaan yhteystiedot</h4>
-                    {bid.customerContact.email && (
-                      <p style={{ margin: "0.25rem 0", fontSize: "14px", color: "#065F46" }}>
-                        <strong>Sähköposti:</strong> {bid.customerContact.email}
+                  {/* Job context */}
+                  {bid.job && (
+                    <div style={{ backgroundColor: "#F8FAFC", borderBottom: `1px solid ${colors.border}`, padding: "0.875rem 1.5rem" }}>
+                      <p style={{ fontSize: "13px", color: colors.textMuted, marginBottom: "0.25rem", fontWeight: "500", textTransform: "uppercase", letterSpacing: "0.04em" }}>Job</p>
+                      <p style={{ fontSize: "14px", color: colors.text, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                        {bid.job.description}
                       </p>
-                    )}
-                    {bid.customerContact.phone && (
-                      <p style={{ margin: "0.25rem 0", fontSize: "14px", color: "#065F46" }}>
-                        <strong>Puhelin:</strong> {bid.customerContact.phone}
-                      </p>
+                      <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
+                        {bid.job.city && <span style={{ fontSize: "12px", color: colors.textMuted }}>📍 {bid.job.city}</span>}
+                        {bid.job.services?.length > 0 && <span style={{ fontSize: "12px", color: colors.textMuted }}>{bid.job.services.slice(0, 2).join(", ")}</span>}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ padding: "1.5rem" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+                      <div>
+                        <p style={{ fontSize: "12px", fontWeight: "600", color: colors.textMuted, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.25rem" }}>Your bid</p>
+                        <p style={{ fontSize: "26px", fontWeight: "700", color: colors.text }}>€{bid.price}</p>
+                      </div>
+                      <span style={badge(statusVariant(bid.status))}>{statusLabel(bid.status)}</span>
+                    </div>
+
+                    {/* Proposal */}
+                    <div style={{ backgroundColor: "#F8FAFC", borderRadius: radius.sm, padding: "1rem", marginBottom: "1rem" }}>
+                      <p style={{ fontSize: "12px", fontWeight: "600", color: colors.textMuted, marginBottom: "0.5rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Your proposal</p>
+                      <p style={{ fontSize: "14px", color: colors.textSecondary, lineHeight: "1.65", whiteSpace: "pre-wrap" }}>{bid.proposal}</p>
+                    </div>
+
+                    {/* Customer contact on acceptance */}
+                    {bid.status === "accepted" && bid.customerContact && (bid.customerContact.email || bid.customerContact.phone) && (
+                      <div style={{ backgroundColor: colors.successBg, border: `1px solid #6EE7B7`, borderRadius: radius.sm, padding: "1rem" }}>
+                        <p style={{ fontSize: "13px", fontWeight: "600", color: colors.successText, marginBottom: "0.5rem" }}>
+                          Customer Contact Details
+                        </p>
+                        {bid.customerContact.email && (
+                          <p style={{ fontSize: "14px", color: colors.successText, marginBottom: "0.25rem" }}>
+                            ✉ {bid.customerContact.email}
+                          </p>
+                        )}
+                        {bid.customerContact.phone && (
+                          <p style={{ fontSize: "14px", color: colors.successText }}>
+                            📞 {bid.customerContact.phone}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
