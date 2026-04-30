@@ -3,6 +3,7 @@ import { PutCommand, UpdateCommand, QueryCommand, GetCommand, DeleteCommand } fr
 import { v4 as uuidv4 } from "uuid";
 import { ddb } from "../client/dynamodb.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { sendBidNotificationEmail, sendBidAcceptedEmail } from "../services/email.js";
 
 const router = express.Router();
 const TABLE_NAME = "videoKuvaajat";
@@ -263,7 +264,8 @@ router.post("/api/bid", authenticateToken, async (req, res) => {
       bidId: id,
       entryType: "bid",
       jobId: jobId.trim(),
-      videographerId: videographerId, // From JWT, not request body
+      videographerId: videographerId,
+      videographerEmail: req.user.email || null,
       price: bidPrice,
       proposal: proposal.trim(),
       confirmedAllServices: true,
@@ -276,6 +278,22 @@ router.post("/api/bid", authenticateToken, async (req, res) => {
         Item: bid,
       })
     );
+
+    // Notify customer of new bid (fire-and-forget)
+    ddb.send(new GetCommand({ TableName: TABLE_NAME, Key: { id: jobId.trim() } }))
+      .then((result) => {
+        const job = result.Item;
+        if (job?.customerEmail) {
+          return sendBidNotificationEmail({
+            customerEmail: job.customerEmail,
+            photographerName: req.user.name || "Kuvaaja",
+            jobDescription: job.description || "",
+            bidPrice: bidPrice,
+            bidProposal: proposal.trim(),
+          }).then((r) => console.log("[email] bid notification sent:", JSON.stringify(r)));
+        }
+      })
+      .catch((err) => console.error("[email] bid notification error:", err?.message || err));
 
     res.status(201).json({
       success: true,
@@ -511,6 +529,19 @@ router.patch("/api/bids/:bidId", authenticateToken, async (req, res) => {
           );
         }
       }
+    }
+
+    // Notify photographer their bid was accepted (fire-and-forget)
+    if (status === "accepted" && bid.videographerEmail) {
+      sendBidAcceptedEmail({
+        photographerEmail: bid.videographerEmail,
+        customerEmail: job.customerEmail || null,
+        customerPhone: job.customerPhone || null,
+        jobDescription: job.description || "",
+        bidPrice: bid.price,
+      })
+        .then((r) => console.log("[email] bid accepted notification sent:", JSON.stringify(r)))
+        .catch((err) => console.error("[email] bid accepted notification error:", err?.message || err));
     }
 
     res.status(200).json({

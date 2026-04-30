@@ -8,8 +8,8 @@
     "dev": "nodemon src/index.js"
   },
   "devDependencies": {
-    "vitest": "^2.0.0",
-    "supertest": "^7.0.0"
+    "supertest": "^7.0.0",
+    "vitest": "^2.0.0"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +27,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.2",
     "nodemon": "^3.1.11",
+    "resend": "^6.12.2",
     "uuid": "^13.0.0"
   }
 }
