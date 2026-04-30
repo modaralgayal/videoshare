@@ -144,10 +144,14 @@ router.post("/api/job", authenticateToken, async (req, res) => {
       referenceLinks: req.body.referenceLinks || [],
       attachments: req.body.attachments || [],
       
+      // Customer contact (stored encrypted in job, only revealed after bid acceptance)
+      customerEmail: req.user.email || null,
+      customerPhone: req.body.customerPhone || null,
+
       // Metadata
       status: "open",
       createdAt: new Date().toISOString(),
-      expiresAt: req.body.expiresAt || null, // Should be set to 90 days from now
+      expiresAt: req.body.expiresAt || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
     await ddb.send(
@@ -204,9 +208,17 @@ router.get("/api/jobs", authenticateToken, async (req, res) => {
       ? processedJobs
       : processedJobs.filter((job) => job.status !== "expired");
 
+    const finalJobs = filteredJobs.map(job => {
+      if (currentUser.userType === "photographer") {
+        const { exactAddress, customerPhone, customerEmail, ...safe } = job;
+        return safe;
+      }
+      return job;
+    });
+
     res.status(200).json({
       success: true,
-      jobs: filteredJobs,
+      jobs: finalJobs,
     });
   } catch (error) {
     console.error("Error fetching jobs:", error);
@@ -241,6 +253,10 @@ router.post("/api/bid", authenticateToken, async (req, res) => {
       return res.status(400).json({ error: "Proposal is required and must be a non-empty string" });
     }
 
+    if (!req.body.confirmedAllServices) {
+      return res.status(400).json({ error: "You must confirm you can deliver all requested services" });
+    }
+
     const id = uuidv4();
     const bid = {
       id: id,
@@ -250,6 +266,7 @@ router.post("/api/bid", authenticateToken, async (req, res) => {
       videographerId: videographerId, // From JWT, not request body
       price: bidPrice,
       proposal: proposal.trim(),
+      confirmedAllServices: true,
       status: req.body.status || "pending",
     };
 
@@ -454,12 +471,8 @@ router.patch("/api/bids/:bidId", authenticateToken, async (req, res) => {
       })
     );
 
-    // If accepting a bid, optionally reject all other bids for this job
+    // If accepting a bid, reject all other pending bids for the same job
     if (status === "accepted") {
-      const allBidsForJob = allItems.filter(
-        (item) => item.bidId && (item.id !== bidId && item.bidId !== bidId) && item.jobId === bid.jobId
-      );
-
       // Query all bids for this job and reject pending ones (excluding current bid)
       const otherBidsResult = await ddb.send(
         new QueryCommand({
@@ -568,8 +581,8 @@ router.get("/api/my-bids", authenticateToken, async (req, res) => {
               budgetMin: job.budgetMin,
               budgetMax: job.budgetMax,
               budgetUnknown: job.budgetUnknown || false,
-              budget_min: job.budgetMin || job.budget_min, // Backward compatibility
-              budget_max: job.budgetMax || job.budget_max, // Backward compatibility
+              budget_min: job.budgetMin || job.budget_min,
+              budget_max: job.budgetMax || job.budget_max,
               status: job.status,
               services: job.services || [],
               city: job.city,
@@ -580,6 +593,10 @@ router.get("/api/my-bids", authenticateToken, async (req, res) => {
               dateRange: job.dateRange,
             }
           : null,
+        customerContact: bid.status === "accepted" ? {
+          email: job?.customerEmail || null,
+          phone: job?.customerPhone || null,
+        } : null,
       };
     });
 

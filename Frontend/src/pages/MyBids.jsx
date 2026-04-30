@@ -191,6 +191,22 @@ export const MyBids = () => {
                     {bid.proposal}
                   </p>
                 </div>
+
+                {bid.status === "accepted" && bid.customerContact && (bid.customerContact.email || bid.customerContact.phone) && (
+                  <div style={{ marginTop: "1rem", padding: "1rem", backgroundColor: "#D1FAE5", border: "1px solid #6EE7B7", borderRadius: "5px" }}>
+                    <h4 style={{ marginTop: 0, marginBottom: "0.5rem", color: "#065F46" }}>Asiakkaan yhteystiedot</h4>
+                    {bid.customerContact.email && (
+                      <p style={{ margin: "0.25rem 0", fontSize: "14px", color: "#065F46" }}>
+                        <strong>Sähköposti:</strong> {bid.customerContact.email}
+                      </p>
+                    )}
+                    {bid.customerContact.phone && (
+                      <p style={{ margin: "0.25rem 0", fontSize: "14px", color: "#065F46" }}>
+                        <strong>Puhelin:</strong> {bid.customerContact.phone}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}

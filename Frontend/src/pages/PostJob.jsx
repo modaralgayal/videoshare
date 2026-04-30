@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { auth } from "../config/firebaseConfig";
 import { postJob } from "../controllers/jobs";
 import { getUser, isAuthenticated } from "../controllers/user";
 
@@ -11,6 +13,14 @@ export const PostJob = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // OTP state
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const confirmationResultRef = useRef(null);
+  const recaptchaVerifierRef = useRef(null);
 
   // Form state - comprehensive structure
   const [formData, setFormData] = useState({
@@ -92,6 +102,25 @@ export const PostJob = () => {
       navigate("/signin");
     }
   }, [navigate, user]);
+
+  // Load draft on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("postjob_draft");
+      if (saved) {
+        setFormData((prev) => ({ ...prev, ...JSON.parse(saved) }));
+      }
+    } catch (_) {}
+  }, []);
+
+  // Autosave draft while filling out form (skip step 0)
+  useEffect(() => {
+    if (currentStep > 0) {
+      try {
+        localStorage.setItem("postjob_draft", JSON.stringify(formData));
+      } catch (_) {}
+    }
+  }, [formData, currentStep]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -300,9 +329,13 @@ export const PostJob = () => {
         expiresAt: expiresAt.toISOString(),
       };
 
+      // Include verified phone number
+      jobData.customerPhone = formData.phoneNumber || null;
+
       await postJob(jobData);
+      localStorage.removeItem("postjob_draft");
       setSuccess(true);
-      
+
       setTimeout(() => {
         navigate("/jobs");
       }, 2000);
@@ -404,34 +437,133 @@ export const PostJob = () => {
         </div>
       )}
 
-      {/* Step 0 - Already authenticated, just verify */}
+      {/* Step 0 - Phone OTP verification */}
       {currentStep === 0 && (
         <div style={{ backgroundColor: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "2rem" }}>
-          <h2 style={{ color: "#0F172A", marginBottom: "1rem" }}>Verification</h2>
-          <p style={{ color: "#475569", marginBottom: "1.5rem" }}>
-            You are logged in as: {user.email || user.name}
+          <div style={{ backgroundColor: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: "6px", padding: "0.75rem 1rem", marginBottom: "1.5rem" }}>
+            <p style={{ color: "#1E40AF", fontSize: "14px", margin: 0, fontWeight: "500" }}>
+              Tarjouspyynnön jättäminen on täysin maksutonta.
+            </p>
+          </div>
+
+          <h2 style={{ color: "#0F172A", marginBottom: "1rem" }}>Vahvista yhteystietosi</h2>
+          <p style={{ color: "#475569", fontSize: "14px", marginBottom: "1.5rem" }}>
+            Tarjoukset toimitetaan sähköpostiisi. Vahvista puhelinnumerosi OTP-koodilla, jotta tarjoajat voivat tavoittaa sinut.
           </p>
-          <p style={{ color: "#64748B", fontSize: "14px", marginBottom: "1.5rem" }}>
-            Tarjoukset toimitetaan sähköpostiisi. Varmista, että sähköpostiosoitteesi on oikein.
-          </p>
-          <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+
+          {/* Email (read-only from Google account) */}
+          <div style={{ marginBottom: "1.25rem" }}>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500", color: "#0F172A", fontSize: "14px" }}>
+              Sähköposti
+            </label>
+            <input
+              type="email"
+              value={formData.email || user?.email || ""}
+              readOnly
+              style={{ width: "100%", padding: "0.75rem", border: "1px solid #E2E8F0", borderRadius: "5px", fontSize: "14px", backgroundColor: "#F8FAFC", color: "#64748B", boxSizing: "border-box" }}
+            />
+          </div>
+
+          {/* Phone number input */}
+          <div style={{ marginBottom: "1.25rem" }}>
+            <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500", color: "#0F172A", fontSize: "14px" }}>
+              Puhelinnumero <span style={{ color: "#EF4444" }}>*</span>
+            </label>
+            <input
+              type="tel"
+              value={formData.phoneNumber}
+              onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
+              placeholder="+358 40 123 4567"
+              disabled={otpSent}
+              style={{ width: "100%", padding: "0.75rem", border: "1px solid #E2E8F0", borderRadius: "5px", fontSize: "14px", boxSizing: "border-box", backgroundColor: otpSent ? "#F8FAFC" : "#FFFFFF" }}
+            />
+          </div>
+
+          {/* Send OTP button */}
+          {!otpSent && (
             <button
               type="button"
-              onClick={nextStep}
-              style={{
-                padding: "0.75rem 1.5rem",
-                backgroundColor: "#1E3A8A",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-                cursor: "pointer",
-                fontSize: "16px",
-                fontWeight: "600",
+              disabled={otpLoading || !formData.phoneNumber}
+              onClick={async () => {
+                if (!formData.phoneNumber) {
+                  setError("Syötä puhelinnumero");
+                  return;
+                }
+                setError("");
+                setOtpLoading(true);
+                try {
+                  if (!recaptchaVerifierRef.current) {
+                    recaptchaVerifierRef.current = new RecaptchaVerifier(auth, "recaptcha-container", { size: "invisible" });
+                  }
+                  const result = await signInWithPhoneNumber(auth, formData.phoneNumber, recaptchaVerifierRef.current);
+                  confirmationResultRef.current = result;
+                  setOtpSent(true);
+                } catch (err) {
+                  setError(err.message || "OTP-koodin lähetys epäonnistui. Tarkista puhelinnumero.");
+                  recaptchaVerifierRef.current = null;
+                } finally {
+                  setOtpLoading(false);
+                }
               }}
+              style={{ padding: "0.75rem 1.5rem", backgroundColor: (!formData.phoneNumber || otpLoading) ? "#94A3B8" : "#1E3A8A", color: "white", border: "none", borderRadius: "5px", cursor: (!formData.phoneNumber || otpLoading) ? "not-allowed" : "pointer", fontSize: "15px", fontWeight: "600" }}
             >
-              Continue
+              {otpLoading ? "Lähetetään..." : "Lähetä vahvistuskoodi"}
             </button>
-          </div>
+          )}
+
+          {/* OTP confirmation */}
+          {otpSent && !phoneVerified && (
+            <div>
+              <p style={{ color: "#065F46", backgroundColor: "#D1FAE5", padding: "0.75rem 1rem", borderRadius: "5px", fontSize: "14px", marginBottom: "1rem" }}>
+                Vahvistuskoodi lähetetty numeroon {formData.phoneNumber}
+              </p>
+              <div style={{ marginBottom: "1rem" }}>
+                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "500", color: "#0F172A", fontSize: "14px" }}>
+                  OTP-koodi <span style={{ color: "#EF4444" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  placeholder="123456"
+                  maxLength={6}
+                  style={{ width: "100%", padding: "0.75rem", border: "1px solid #E2E8F0", borderRadius: "5px", fontSize: "14px", boxSizing: "border-box", letterSpacing: "0.2em" }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: "0.75rem" }}>
+                <button
+                  type="button"
+                  disabled={otpLoading || otpCode.length < 4}
+                  onClick={async () => {
+                    setError("");
+                    setOtpLoading(true);
+                    try {
+                      await confirmationResultRef.current.confirm(otpCode);
+                      setPhoneVerified(true);
+                      setCurrentStep(1);
+                    } catch (_) {
+                      setError("Virheellinen koodi. Yritä uudelleen.");
+                    } finally {
+                      setOtpLoading(false);
+                    }
+                  }}
+                  style={{ padding: "0.75rem 1.5rem", backgroundColor: (otpLoading || otpCode.length < 4) ? "#94A3B8" : "#1E3A8A", color: "white", border: "none", borderRadius: "5px", cursor: (otpLoading || otpCode.length < 4) ? "not-allowed" : "pointer", fontSize: "15px", fontWeight: "600" }}
+                >
+                  {otpLoading ? "Vahvistetaan..." : "Vahvista"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setOtpSent(false); setOtpCode(""); recaptchaVerifierRef.current = null; }}
+                  style={{ padding: "0.75rem 1rem", backgroundColor: "transparent", color: "#475569", border: "1px solid #E2E8F0", borderRadius: "5px", cursor: "pointer", fontSize: "14px" }}
+                >
+                  Vaihda numero
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Invisible reCAPTCHA container */}
+          <div id="recaptcha-container" />
         </div>
       )}
 

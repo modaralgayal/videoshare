@@ -106,15 +106,14 @@ export const MakeBid = () => {
         jobId: job.id || job.jobId,
         price: priceNum,
         proposal: proposal.trim(),
-        status: "pending",
+        confirmedAllServices: true,
       };
 
       await makeBid(bidData);
       setSuccess(true);
 
-      // Redirect to jobs page after 2 seconds
       setTimeout(() => {
-        navigate("/jobs");
+        navigate("/my-bids");
       }, 2000);
     } catch (err) {
       setError(err.message || "Failed to submit bid. Please try again.");
@@ -517,7 +516,7 @@ export const MakeBid = () => {
             name="price"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            placeholder="e.g., 750"
+            placeholder="Kirjoita hinta euroissa, esim. 750"
             min="0"
             step="0.01"
             required
@@ -558,7 +557,7 @@ export const MakeBid = () => {
             name="proposal"
             value={proposal}
             onChange={(e) => setProposal(e.target.value)}
-            placeholder="Describe your approach, timeline, and why you're the right fit for this job..."
+            placeholder="Kuvaa tässä, miten pystyt toteuttamaan toimeksiannon..."
             required
             rows={8}
             style={{
@@ -578,20 +577,20 @@ export const MakeBid = () => {
         <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !canCoverAllServices || !price || !proposal.trim()}
             style={{
-              backgroundColor: "#F59E0B",
+              backgroundColor: (!canCoverAllServices || !price || !proposal.trim()) ? "#94A3B8" : "#1E3A8A",
               color: "white",
               border: "none",
               padding: "0.75rem 2rem",
               borderRadius: "5px",
-              cursor: loading ? "not-allowed" : "pointer",
+              cursor: (loading || !canCoverAllServices || !price || !proposal.trim()) ? "not-allowed" : "pointer",
               fontSize: "16px",
               fontWeight: "bold",
               opacity: loading ? 0.6 : 1,
             }}
           >
-            {loading ? "Submitting..." : "Submit Bid"}
+            {loading ? "Lähetetään..." : "Lähetä tarjous"}
           </button>
           <button
             type="button"
@@ -615,3 +614,5 @@ export const MakeBid = () => {
     </div>
   );
 };
+
+export default MakeBid;
