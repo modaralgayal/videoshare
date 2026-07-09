@@ -3,6 +3,7 @@ import { PutCommand, UpdateCommand, QueryCommand, GetCommand, DeleteCommand } fr
 import { v4 as uuidv4 } from "uuid";
 import { ddb } from "../client/dynamodb.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { validateString, validateNumber, validateArray, validateEmail } from "../validation/index.js";
 import { sendBidNotificationEmail, sendBidAcceptedEmail } from "../services/email.js";
 
 const router = express.Router();
@@ -19,47 +20,50 @@ router.post("/api/job", authenticateToken, async (req, res) => {
     // Use customerId from JWT, not from request body (security)
     const customerId = req.user.uid;
 
-    // Validate required fields
-    const { description, services, city, radius, duration, difficulty } = req.body;
-
-    if (!description || typeof description !== "string" || description.trim().length === 0) {
-      return res.status(400).json({ error: "Description is required and must be a non-empty string" });
+    // Validate required fields using validation utilities
+    const descriptionResult = validateString(req.body.description, { minLength: 1, trim: true });
+    if (!descriptionResult.valid) {
+      return res.status(400).json({ error: descriptionResult.error || "Description is required and must be a non-empty string" });
     }
 
-    if (!services || !Array.isArray(services) || services.length === 0) {
-      return res.status(400).json({ error: "At least one service must be selected" });
+    const servicesResult = validateArray(req.body.services, { minLength: 1 });
+    if (!servicesResult.valid) {
+      return res.status(400).json({ error: servicesResult.error || "At least one service must be selected" });
     }
 
-    if (!city || typeof city !== "string" || city.trim().length === 0) {
-      return res.status(400).json({ error: "City is required" });
+    const cityResult = validateString(req.body.city, { minLength: 1, trim: true });
+    if (!cityResult.valid) {
+      return res.status(400).json({ error: cityResult.error || "City is required" });
     }
 
-    if (!radius) {
-      return res.status(400).json({ error: "Radius is required" });
+    const radiusResult = validateNumber(req.body.radius, { min: 0 });
+    if (!radiusResult.valid) {
+      return res.status(400).json({ error: radiusResult.error || "Radius is required" });
     }
 
-    if (!duration) {
-      return res.status(400).json({ error: "Duration is required" });
+    const durationResult = validateString(req.body.duration, { minLength: 1 });
+    if (!durationResult.valid) {
+      return res.status(400).json({ error: durationResult.error || "Duration is required" });
     }
 
-    if (!difficulty) {
-      return res.status(400).json({ error: "Difficulty level is required" });
+    const difficultyResult = validateString(req.body.difficulty, { minLength: 1 });
+    if (!difficultyResult.valid) {
+      return res.status(400).json({ error: difficultyResult.error || "Difficulty level is required" });
     }
 
     // Validate budget if not unknown
     if (!req.body.budgetUnknown) {
-      const minBudget = Number(req.body.budgetMin);
-      const maxBudget = Number(req.body.budgetMax);
-
-      if (isNaN(minBudget) || minBudget <= 0) {
-        return res.status(400).json({ error: "Minimum budget must be a positive number" });
+      const minBudgetResult = validateNumber(req.body.budgetMin, { min: 0 });
+      if (!minBudgetResult.valid) {
+        return res.status(400).json({ error: minBudgetResult.error || "Minimum budget must be a positive number" });
       }
 
-      if (isNaN(maxBudget) || maxBudget <= 0) {
-        return res.status(400).json({ error: "Maximum budget must be a positive number" });
+      const maxBudgetResult = validateNumber(req.body.budgetMax, { min: 0 });
+      if (!maxBudgetResult.valid) {
+        return res.status(400).json({ error: maxBudgetResult.error || "Maximum budget must be a positive number" });
       }
 
-      if (minBudget >= maxBudget) {
+      if (minBudgetResult.value >= maxBudgetResult.value) {
         return res.status(400).json({ error: "Maximum budget must be greater than minimum budget" });
       }
     }
@@ -70,63 +74,63 @@ router.post("/api/job", authenticateToken, async (req, res) => {
     }
 
     const id = uuidv4();
-    
+
     // Create comprehensive job object
     const job = {
       id: id,
       jobId: id,
       entryType: "job",
       customerId: customerId,
-      
+
       // Basic settings
       customerType: req.body.customerType || null,
       projectContext: req.body.projectContext || null,
-      
+
       // Services
-      services: services,
-      
+      services: servicesResult.value,
+
       // Location
-      city: city.trim(),
+      city: cityResult.value,
       area: req.body.area ? req.body.area.trim() : null,
       exactAddress: req.body.exactAddress ? req.body.exactAddress.trim() : null, // Hidden until acceptance
-      radius: radius,
+      radius: radiusResult.value,
       allowFurther: req.body.allowFurther || false,
-      
+
       // Date
       date: req.body.date || null,
       dateRange: req.body.dateRange || null,
       dateNotLocked: req.body.dateNotLocked || false,
-      
+
       // Duration & Budget
-      duration: duration,
-      budgetMin: req.body.budgetUnknown ? null : Number(req.body.budgetMin),
-      budgetMax: req.body.budgetUnknown ? null : Number(req.body.budgetMax),
+      duration: durationResult.value,
+      budgetMin: req.body.budgetUnknown ? null : minBudgetResult?.value || null,
+      budgetMax: req.body.budgetUnknown ? null : maxBudgetResult?.value || null,
       budgetUnknown: req.body.budgetUnknown || false,
-      
+
       // Profile & Difficulty
       preferredProfile: req.body.preferredProfile || null,
-      difficulty: difficulty,
+      difficulty: difficultyResult.value,
       difficultyDetails: req.body.difficultyDetails ? req.body.difficultyDetails.trim() : null,
       priority: req.body.priority || [],
-      
+
       // Service modules (only include if service is selected)
       photoSubjects: services.includes("valokuvat") ? (req.body.photoSubjects || []) : null,
       photoCount: services.includes("valokuvat") ? (req.body.photoCount || null) : null,
       photoEditing: services.includes("valokuvat") ? (req.body.photoEditing || null) : null,
       photoUsage: services.includes("valokuvat") ? (req.body.photoUsage || []) : null,
       photoDetails: services.includes("valokuvat") ? (req.body.photoDetails ? req.body.photoDetails.trim() : null) : null,
-      
+
       videoCount: services.includes("videotuotanto") ? (req.body.videoCount || null) : null,
       videoLength: services.includes("videotuotanto") ? (req.body.videoLength || null) : null,
       videoFormat: services.includes("videotuotanto") ? (req.body.videoFormat || []) : null,
       videoNeeds: services.includes("videotuotanto") ? (req.body.videoNeeds || []) : null,
       videoUsage: services.includes("videotuotanto") ? (req.body.videoUsage || []) : null,
       videoDetails: services.includes("videotuotanto") ? (req.body.videoDetails ? req.body.videoDetails.trim() : null) : null,
-      
+
       droneSubject: (services.includes("dronekuvat") || services.includes("dronevideo")) ? (req.body.droneSubject || []) : null,
       droneRestriction: (services.includes("dronekuvat") || services.includes("dronevideo")) ? (req.body.droneRestriction || null) : null,
       droneDetails: (services.includes("dronekuvat") || services.includes("dronevideo")) ? (req.body.droneDetails ? req.body.droneDetails.trim() : null) : null,
-      
+
       shortVideoChannels: services.includes("lyhytvideot") ? (req.body.shortVideoChannels || []) : null,
       shortVideoWhoFilms: services.includes("lyhytvideot") ? (req.body.shortVideoWhoFilms || null) : null,
       shortVideoFrequency: services.includes("lyhytvideot") ? (req.body.shortVideoFrequency || null) : null,
@@ -135,16 +139,16 @@ router.post("/api/job", authenticateToken, async (req, res) => {
       shortVideoRights: services.includes("lyhytvideot") ? (req.body.shortVideoRights || null) : null,
       shortVideoStyle: services.includes("lyhytvideot") ? (req.body.shortVideoStyle || []) : null,
       shortVideoDetails: services.includes("lyhytvideot") ? (req.body.shortVideoDetails ? req.body.shortVideoDetails.trim() : null) : null,
-      
+
       editingSource: services.includes("editointi") ? (req.body.editingSource || []) : null,
       editingFormat: services.includes("editointi") ? (req.body.editingFormat || []) : null,
       editingDetails: services.includes("editointi") ? (req.body.editingDetails ? req.body.editingDetails.trim() : null) : null,
-      
+
       // Description & References
-      description: description.trim(),
+      description: descriptionResult.value,
       referenceLinks: req.body.referenceLinks || [],
       attachments: req.body.attachments || [],
-      
+
       // Customer contact (stored encrypted in job, only revealed after bid acceptance)
       customerEmail: req.user.email || null,
       customerPhone: req.body.customerPhone || null,
@@ -172,15 +176,13 @@ router.post("/api/job", authenticateToken, async (req, res) => {
 });
 
 // Get all jobs (authenticated users)
-
-
 //--------------- USE GSI HERE ----------------//
 router.get("/api/jobs", authenticateToken, async (req, res) => {
   try {
     const result = await ddb.send(
       new QueryCommand({
-        TableName: TABLE_NAME, 
-        IndexName: "entryType-index", 
+        TableName: TABLE_NAME,
+        IndexName: "entryType-index",
         KeyConditionExpression: "entryType = :entryType",
         ExpressionAttributeValues: {
           ":entryType": "job"
@@ -189,7 +191,7 @@ router.get("/api/jobs", authenticateToken, async (req, res) => {
     );
 
     const jobs = result.Items || [];
-    
+
     // Filter out expired jobs and mark them as expired
     const now = new Date();
     const processedJobs = jobs.map((job) => {
@@ -238,20 +240,20 @@ router.post("/api/bid", authenticateToken, async (req, res) => {
     // Use videographerId from JWT, not from request body (security)
     const videographerId = req.user.uid;
 
-    // Input validation
-    const { jobId, price, proposal } = req.body;
-
-    if (!jobId || typeof jobId !== "string") {
-      return res.status(400).json({ error: "Job ID is required" });
+    // Input validation using validation utilities
+    const jobIdResult = validateString(req.body.jobId, { minLength: 1 });
+    if (!jobIdResult.valid) {
+      return res.status(400).json({ error: jobIdResult.error || "Job ID is required" });
     }
 
-    const bidPrice = Number(price);
-    if (isNaN(bidPrice) || bidPrice <= 0) {
-      return res.status(400).json({ error: "Price must be a positive number" });
+    const priceResult = validateNumber(req.body.price, { min: 0 });
+    if (!priceResult.valid) {
+      return res.status(400).json({ error: priceResult.error || "Price must be a positive number" });
     }
 
-    if (!proposal || typeof proposal !== "string" || proposal.trim().length === 0) {
-      return res.status(400).json({ error: "Proposal is required and must be a non-empty string" });
+    const proposalResult = validateString(req.body.proposal, { minLength: 1, trim: true });
+    if (!proposalResult.valid) {
+      return res.status(400).json({ error: proposalResult.error || "Proposal is required and must be a non-empty string" });
     }
 
     if (!req.body.confirmedAllServices) {
@@ -263,11 +265,11 @@ router.post("/api/bid", authenticateToken, async (req, res) => {
       id: id,
       bidId: id,
       entryType: "bid",
-      jobId: jobId.trim(),
+      jobId: jobIdResult.value.trim(),
       videographerId: videographerId,
       videographerEmail: req.user.email || null,
-      price: bidPrice,
-      proposal: proposal.trim(),
+      price: priceResult.value,
+      proposal: proposalResult.value,
       confirmedAllServices: true,
       status: req.body.status || "pending",
     };
@@ -280,7 +282,7 @@ router.post("/api/bid", authenticateToken, async (req, res) => {
     );
 
     // Notify customer of new bid (fire-and-forget)
-    ddb.send(new GetCommand({ TableName: TABLE_NAME, Key: { id: jobId.trim() } }))
+    ddb.send(new GetCommand({ TableName: TABLE_NAME, Key: { id: jobIdResult.value.trim() } }))
       .then((result) => {
         const job = result.Item;
         if (job?.customerEmail) {
@@ -288,8 +290,8 @@ router.post("/api/bid", authenticateToken, async (req, res) => {
             customerEmail: job.customerEmail,
             photographerName: req.user.name || "Kuvaaja",
             jobDescription: job.description || "",
-            bidPrice: bidPrice,
-            bidProposal: proposal.trim(),
+            bidPrice: priceResult.value,
+            bidProposal: proposalResult.value,
           }).then((r) => console.log("[email] bid notification sent:", JSON.stringify(r)));
         }
       })
@@ -374,12 +376,12 @@ router.get("/api/bids", authenticateToken, async (req, res) => {
     // Enrich bids with job and photographer information
     const bidsWithJobs = customerBids.map((bid) => {
       const job = jobs.find((j) => (j.id || j.jobId) === bid.jobId);
-      
+
       // Find photographer profile picture
       const photographerProfile = profiles.find(
         (item) => item.photographerId === bid.videographerId
       );
-      
+
       return {
         ...bid,
         job: job
@@ -441,7 +443,7 @@ router.patch("/api/bids/:bidId", authenticateToken, async (req, res) => {
     );
 
     const bid = bidsResult.Items?.find((item) => (item.id === bidId || item.bidId === bidId));
-    
+
     if (!bid) {
       return res.status(404).json({ error: "Bid not found" });
     }
@@ -595,7 +597,7 @@ router.get("/api/my-bids", authenticateToken, async (req, res) => {
       })
     );
 
-    const allJobs = (jobsResult.Items || []).filter((job) => 
+    const allJobs = (jobsResult.Items || []).filter((job) =>
       jobIds.includes(job.id) || jobIds.includes(job.jobId)
     );
 
@@ -703,11 +705,11 @@ router.put("/api/profile-picture", authenticateToken, async (req, res) => {
       const isBase64 = trimmedPicture.startsWith("data:image/");
       // Check if it's a regular URL
       const isUrl = trimmedPicture.startsWith("http://") || trimmedPicture.startsWith("https://");
-      
+
       if (!isBase64 && !isUrl) {
         return res.status(400).json({ error: "Profile picture must be a valid URL or image data" });
       }
-      
+
       // Validate base64 data URL format
       if (isBase64) {
         // Check if it's a valid data URL format: data:image/[type];base64,[data]
@@ -715,7 +717,7 @@ router.put("/api/profile-picture", authenticateToken, async (req, res) => {
         if (!base64Pattern.test(trimmedPicture)) {
           return res.status(400).json({ error: "Invalid image data format. Please use JPEG, PNG, or WebP." });
         }
-        
+
         // Check base64 data size (approximate, base64 is ~33% larger than original)
         // Limit to ~2.5MB base64 to account for ~2MB original file
         const maxBase64Size = 2.5 * 1024 * 1024;
@@ -860,7 +862,7 @@ router.put("/api/photographer-profile", authenticateToken, async (req, res) => {
       profilePicture: existingProfile.profilePicture || "",
       updatedAt: new Date().toISOString(),
       createdAt: existingProfile.createdAt || new Date().toISOString(),
-      
+
       // Tili & yhteys (Account & Contact)
       phoneNumber: profileData.phoneNumber || existingProfile.phoneNumber || "",
       phoneNumberVisible: profileData.phoneNumberVisible !== undefined ? profileData.phoneNumberVisible : existingProfile.phoneNumberVisible !== undefined ? existingProfile.phoneNumberVisible : true,
@@ -871,17 +873,17 @@ router.put("/api/photographer-profile", authenticateToken, async (req, res) => {
       vatObliged: profileData.vatObliged !== undefined ? profileData.vatObliged : existingProfile.vatObliged !== undefined ? existingProfile.vatObliged : false,
       billingModel: profileData.billingModel || existingProfile.billingModel || "",
       profileLanguages: profileData.profileLanguages || existingProfile.profileLanguages || [],
-      
+
       // Profiilin peruskuvaus (Basic Profile Description)
       title: profileData.title || existingProfile.title || "",
       shortDescription: profileData.shortDescription || existingProfile.shortDescription || "",
       longDescription: profileData.longDescription || existingProfile.longDescription || "",
-      
+
       // Yritystyyppi & tiimi (Company Type & Team)
       operatorType: profileData.operatorType || existingProfile.operatorType || "",
       teamSize: profileData.teamSize !== undefined ? profileData.teamSize : existingProfile.teamSize !== undefined ? existingProfile.teamSize : null,
       roles: profileData.roles || existingProfile.roles || [],
-      
+
       // Toiminta-alue (Service Area)
       hometown: profileData.hometown || existingProfile.hometown || "",
       serviceAreas: profileData.serviceAreas || existingProfile.serviceAreas || [],
@@ -889,47 +891,47 @@ router.put("/api/photographer-profile", authenticateToken, async (req, res) => {
       travelCosts: profileData.travelCosts || existingProfile.travelCosts || null, // { kmPrice, minFee, travelTime }
       servesAllFinland: profileData.servesAllFinland !== undefined ? profileData.servesAllFinland : existingProfile.servesAllFinland !== undefined ? existingProfile.servesAllFinland : false,
       servesAbroad: profileData.servesAbroad !== undefined ? profileData.servesAbroad : existingProfile.servesAbroad !== undefined ? existingProfile.servesAbroad : false,
-      
+
       // Palvelut & osaaminen (Services & Expertise)
       mainServices: profileData.mainServices || existingProfile.mainServices || [],
       categories: profileData.categories || existingProfile.categories || [],
       styleTags: profileData.styleTags || existingProfile.styleTags || [],
       experienceLevel: profileData.experienceLevel || existingProfile.experienceLevel || null, // { years, gigs, level }
       specializations: profileData.specializations || existingProfile.specializations || [],
-      
+
       // Hintatiedot (Pricing Information)
       minStartingPrice: profileData.minStartingPrice !== undefined ? profileData.minStartingPrice : existingProfile.minStartingPrice !== undefined ? existingProfile.minStartingPrice : null,
       dayHourPrice: profileData.dayHourPrice !== undefined ? profileData.dayHourPrice : existingProfile.dayHourPrice !== undefined ? existingProfile.dayHourPrice : null,
       packages: profileData.packages || existingProfile.packages || [], // [{ name, price, included }]
       includedInPrice: profileData.includedInPrice || existingProfile.includedInPrice || [],
       additionalServices: profileData.additionalServices || existingProfile.additionalServices || [], // [{ name, price }]
-      
+
       // Toimitus & prosessi (Delivery & Process)
       averageDeliveryTime: profileData.averageDeliveryTime || existingProfile.averageDeliveryTime || "",
       revisionRounds: profileData.revisionRounds !== undefined ? profileData.revisionRounds : existingProfile.revisionRounds !== undefined ? existingProfile.revisionRounds : null,
       deliveryFormats: profileData.deliveryFormats || existingProfile.deliveryFormats || [],
       formatCapabilities: profileData.formatCapabilities || existingProfile.formatCapabilities || [],
-      
+
       // Kalusto (Equipment)
       cameras: profileData.cameras || existingProfile.cameras || [],
       equipment: profileData.equipment || existingProfile.equipment || [], // lenses, drones, gimbals
       lightingAudio: profileData.lightingAudio || existingProfile.lightingAudio || [],
-      
+
       // Sertifikaatit & turvallisuus (Certifications & Safety)
       droneCertifications: profileData.droneCertifications || existingProfile.droneCertifications || [],
       liabilityInsurance: profileData.liabilityInsurance || existingProfile.liabilityInsurance || null, // { hasInsurance, amount }
       safetyCards: profileData.safetyCards || existingProfile.safetyCards || [],
-      
+
       // Saatavuus (Availability)
       weeklyAvailability: profileData.weeklyAvailability || existingProfile.weeklyAvailability || [],
       leadTime: profileData.leadTime || existingProfile.leadTime || "",
-      
+
       // Viestintä & käytännöt (Communication & Practices)
       preferredContactMethod: profileData.preferredContactMethod || existingProfile.preferredContactMethod || "",
       hasContractTemplate: profileData.hasContractTemplate !== undefined ? profileData.hasContractTemplate : existingProfile.hasContractTemplate !== undefined ? existingProfile.hasContractTemplate : false,
       cancellationTerms: profileData.cancellationTerms || existingProfile.cancellationTerms || "",
       depositRequired: profileData.depositRequired !== undefined ? profileData.depositRequired : existingProfile.depositRequired !== undefined ? existingProfile.depositRequired : false,
-      
+
       // Some & kanavat (Social Media & Channels)
       website: profileData.website || existingProfile.website || "",
       instagram: profileData.instagram || existingProfile.instagram || "",
