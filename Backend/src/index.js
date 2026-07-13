@@ -25,11 +25,11 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for development
-      imgSrc: ["'self'", "data:", "blob:", "https://*.backblazeb2.com"],
-      scriptSrc: ["'self'", "https://apis.google.com", "https://*.firebaseapp.com", "'unsafe-inline'"],
-      connectSrc: ["'self'", process.env.CSP_CONNECT_SRC, "https://www.googleapis.com", "https://identitytoolkit.googleapis.com", "https://securetoken.googleapis.com", "https://firestore.googleapis.com"].filter(Boolean),
-      fontSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://*.backblazeb2.com", "https://www.googletagmanager.com"],
+      scriptSrc: ["'self'", "https://apis.google.com", "https://*.firebaseapp.com", "https://www.googletagmanager.com", "https://www.gstatic.com", "'unsafe-inline'"],
+      connectSrc: ["'self'", process.env.CSP_CONNECT_SRC, "https://www.googleapis.com", "https://identitytoolkit.googleapis.com", "https://securetoken.googleapis.com", "https://firestore.googleapis.com", "https://firebase.googleapis.com", "https://firebaseinstallations.googleapis.com", "https://firebaseremoteconfig.googleapis.com", "https://region1.google-analytics.com", "https://www.googletagmanager.com"].filter(Boolean),
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["https://apis.google.com", "https://*.firebaseapp.com"]
