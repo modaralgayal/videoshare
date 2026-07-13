@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { googleSignIn, authenticateWithBackend, isAuthenticated } from "../controllers/user";
+import { initializeGoogleOneTap, authenticateWithBackend, isAuthenticated } from "../controllers/user";
 
 export const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -15,16 +15,6 @@ export const SignIn = () => {
       navigate("/");
     }
   }, [navigate]);
-
-  // Handle redirect result from Google sign-in
-  useEffect(() => {
-    // Check if returning from redirect (backward compatibility)
-    const savedType = sessionStorage.getItem("userType");
-    if (savedType) {
-      console.log("Cleaning up stale redirect sessionStorage");
-      sessionStorage.removeItem("userType");
-    }
-  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -45,8 +35,8 @@ export const SignIn = () => {
     try {
       setUserType(selectedType);
 
-      // Now proceed with Google sign-in popup
-      const { idToken } = await googleSignIn();
+      // Show Google One Tap prompt (appears on the page, not a popup)
+      const { idToken } = await initializeGoogleOneTap();
 
       // Authenticate with backend and get JWT token
       const data = await authenticateWithBackend(idToken, selectedType);

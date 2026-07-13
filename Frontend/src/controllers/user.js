@@ -1,5 +1,5 @@
 import axios from "axios";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
@@ -74,16 +74,33 @@ export const connectToBackend = async () => {
   }
 };
 
-export const googleSignIn = async () => {
-  const provider = new GoogleAuthProvider();
-  provider.addScope("openid");
-  provider.addScope("email");
-  provider.addScope("profile");
+// Initialize Google One Tap sign-in (no popup — shows a prompt on the page)
+export const initializeGoogleOneTap = () => {
+  return new Promise((resolve, reject) => {
+    if (!window.google?.accounts?.id) {
+      reject(new Error("Google Identity Services not loaded yet. Please try again."));
+      return;
+    }
 
-  const result = await signInWithPopup(auth, provider);
-  const user = result.user;
-  const idToken = await user.getIdToken();
-  return { user, idToken };
+    window.google.accounts.id.initialize({
+      client_id: "233139786180-9rhjoqiqdguc9phtg03kigmd6kmclahl.apps.googleusercontent.com",
+      callback: async (response) => {
+        try {
+          const credential = GoogleAuthProvider.credential(response.credential);
+          const result = await signInWithCredential(auth, credential);
+          const user = result.user;
+          const idToken = await user.getIdToken();
+          resolve({ user, idToken });
+        } catch (error) {
+          console.error("Google One Tap Credential Error:", error);
+          reject(error);
+        }
+      },
+      cancel_on_tap_outside: false,
+    });
+
+    window.google.accounts.id.prompt();
+  });
 };
 
 // Authenticate with backend and get JWT token
