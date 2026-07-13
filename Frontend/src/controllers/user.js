@@ -76,38 +76,34 @@ export const connectToBackend = async () => {
 
 export const googleSignIn = () => {
   return new Promise((resolve, reject) => {
-    // Wait for GIS library to load
-    const tryInit = () => {
-      if (!window.google?.accounts?.oauth2) {
-        setTimeout(tryInit, 100);
-        return;
-      }
+    if (!window.google?.accounts?.oauth2) {
+      reject(new Error("Google Identity Services not loaded yet. Please try again."));
+      return;
+    }
 
-      const client = window.google.accounts.oauth2.initTokenClient({
-        client_id: "233139786180-9rhjoqiqdguc9phtg03kigmd6kmclahl.apps.googleusercontent.com",
-        scope: "openid email profile",
-        callback: async (response) => {
-          try {
-            const credential = GoogleAuthProvider.credential(response.id_token);
-            const result = await signInWithCredential(auth, credential);
-            const user = result.user;
-            const idToken = await user.getIdToken();
-            resolve({ user, idToken });
-          } catch (error) {
-            console.error("Google Sign-In Credential Error:", error);
-            reject(error);
-          }
-        },
-        error_callback: (error) => {
-          console.error("Google Sign-In GIS Error:", error);
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: "233139786180-9rhjoqiqdguc9phtg03kigmd6kmclahl.apps.googleusercontent.com",
+      scope: "openid email profile",
+      callback: async (response) => {
+        try {
+          const credential = GoogleAuthProvider.credential(response.id_token);
+          const result = await signInWithCredential(auth, credential);
+          const user = result.user;
+          const idToken = await user.getIdToken();
+          resolve({ user, idToken });
+        } catch (error) {
+          console.error("Google Sign-In Credential Error:", error);
           reject(error);
         }
-      });
+      },
+      error_callback: (error) => {
+        console.error("Google Sign-In GIS Error:", error);
+        reject(error);
+      }
+    });
 
-      client.requestAccessToken();
-    };
-
-    tryInit();
+    // This must be called directly in the user gesture context
+    client.requestAccessToken();
   });
 };
 
