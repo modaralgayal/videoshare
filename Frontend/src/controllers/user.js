@@ -1,5 +1,5 @@
 import axios from "axios";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { signInWithCredential, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
@@ -74,23 +74,41 @@ export const connectToBackend = async () => {
   }
 };
 
-export const googleSignIn = async () => {
-  try {
-    console.log("googleSignIn: starting popup...");
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    console.log("googleSignIn: popup result received");
+export const googleSignIn = () => {
+  return new Promise((resolve, reject) => {
+    // Wait for GIS library to load
+    const tryInit = () => {
+      if (!window.google?.accounts?.oauth2) {
+        setTimeout(tryInit, 100);
+        return;
+      }
 
-    const user = result.user;
-    const idToken = await user.getIdToken();
+      const client = window.google.accounts.oauth2.initTokenClient({
+        client_id: "233139786180-9rhjoqiqdguc9phtg03kigmd6kmclahl.apps.googleusercontent.com",
+        scope: "openid email profile",
+        callback: async (response) => {
+          try {
+            const credential = GoogleAuthProvider.credential(response.id_token);
+            const result = await signInWithCredential(auth, credential);
+            const user = result.user;
+            const idToken = await user.getIdToken();
+            resolve({ user, idToken });
+          } catch (error) {
+            console.error("Google Sign-In Credential Error:", error);
+            reject(error);
+          }
+        },
+        error_callback: (error) => {
+          console.error("Google Sign-In GIS Error:", error);
+          reject(error);
+        }
+      });
 
-    console.log("googleSignIn: idToken obtained");
-    return { user, idToken };
-  } catch (error) {
-    console.error("Google Sign-In Error:", error);
-    console.error("Google Sign-In Error code:", error.code);
-    throw error;
-  }
+      client.requestAccessToken();
+    };
+
+    tryInit();
+  });
 };
 
 // Authenticate with backend and get JWT token
