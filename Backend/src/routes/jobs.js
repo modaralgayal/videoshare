@@ -94,18 +94,18 @@ router.post("/api/job", authenticateToken, async (req, res) => {
       area: req.body.area ? req.body.area.trim() : null,
       exactAddress: req.body.exactAddress ? req.body.exactAddress.trim() : null, // Hidden until acceptance
       radius: radiusResult.value,
-      allowFurther: req.body.allowFurther || false,
+      allowFurther: req.body.allowFurther === true,
 
       // Date
       date: req.body.date || null,
-      dateRange: req.body.dateRange || null,
-      dateNotLocked: req.body.dateNotLocked || false,
+      dateRange: req.body.dateRange?.start ? req.body.dateRange : null,
+      dateNotLocked: req.body.dateNotLocked === true,
 
       // Duration & Budget
       duration: durationResult.value,
       budgetMin: req.body.budgetUnknown ? null : minBudgetResult?.value || null,
       budgetMax: req.body.budgetUnknown ? null : maxBudgetResult?.value || null,
-      budgetUnknown: req.body.budgetUnknown || false,
+      budgetUnknown: req.body.budgetUnknown === true,
 
       // Profile & Difficulty
       preferredProfile: req.body.preferredProfile || null,
