@@ -25,7 +25,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://*.backblazeb2.com", "https://www.googletagmanager.com"],
       scriptSrc: ["'self'", "https://apis.google.com", "https://*.firebaseapp.com", "https://www.googletagmanager.com", "https://www.gstatic.com", "https://accounts.google.com", "data:", "'unsafe-inline'", "'unsafe-eval'"],
       connectSrc: ["'self'", process.env.CSP_CONNECT_SRC, "https://www.googleapis.com", "https://identitytoolkit.googleapis.com", "https://securetoken.googleapis.com", "https://firestore.googleapis.com", "https://firebase.googleapis.com", "https://firebaseinstallations.googleapis.com", "https://firebaseremoteconfig.googleapis.com", "https://region1.google-analytics.com", "https://www.googletagmanager.com", "https://oauth2.googleapis.com", "https://accounts.google.com"].filter(Boolean),
