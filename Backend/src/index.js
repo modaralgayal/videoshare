@@ -27,12 +27,12 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for development
       imgSrc: ["'self'", "data:", "blob:", "https://*.backblazeb2.com"],
-      scriptSrc: ["'self'"],
-      connectSrc: ["'self'", process.env.CSP_CONNECT_SRC, "https://www.googleapis.com"].filter(Boolean),
+      scriptSrc: ["'self'", "https://apis.google.com"],
+      connectSrc: ["'self'", process.env.CSP_CONNECT_SRC, "https://www.googleapis.com", "https://identitytoolkit.googleapis.com", "https://securetoken.googleapis.com", "https://firestore.googleapis.com"].filter(Boolean),
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
-      frameSrc: ["'none'"]
+      frameSrc: ["https://apis.google.com"]
     }
   }
 }));
