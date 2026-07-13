@@ -20,11 +20,20 @@ export const SignIn = () => {
   useEffect(() => {
     const handleRedirectResult = async () => {
       const savedType = sessionStorage.getItem("userType");
+      console.log("Redirect check - savedType:", savedType);
+
       if (!savedType) return;
 
       try {
+        console.log("Calling getRedirectResultHandler...");
         const result = await getRedirectResultHandler();
-        if (!result) return;
+        console.log("Redirect result:", result);
+
+        if (!result) {
+          console.log("No redirect result found, clearing sessionStorage");
+          sessionStorage.removeItem("userType");
+          return;
+        }
 
         const { idToken } = result;
         const data = await authenticateWithBackend(idToken, savedType);

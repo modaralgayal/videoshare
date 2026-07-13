@@ -81,15 +81,23 @@ export const googleSignInRedirect = () => {
 
 export const getRedirectResultHandler = async () => {
   try {
+    console.log("getRedirectResultHandler: calling getRedirectResult...");
     const result = await getRedirectResult(auth);
-    if (!result) return null;
+    console.log("getRedirectResultHandler: result:", result);
+
+    if (!result) {
+      console.log("getRedirectResultHandler: no result (null), checking URL hash:", window.location.hash);
+      return null;
+    }
 
     const user = result.user;
+    console.log("getRedirectResultHandler: user found:", user.uid);
     const idToken = await user.getIdToken();
 
+    console.log("getRedirectResultHandler: idToken obtained");
     return { user, idToken };
   } catch (error) {
-    console.error("Redirect Result Error:", error);
+    console.error("getRedirectResultHandler Error:", error);
     throw error;
   }
 };
