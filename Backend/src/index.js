@@ -28,7 +28,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for development
       imgSrc: ["'self'", "data:", "blob:", "https://*.backblazeb2.com"],
       scriptSrc: ["'self'"],
-      connectSrc: ["'self'", "https://yourdomain.com", "https://www.googleapis.com"],
+      connectSrc: ["'self'", process.env.CSP_CONNECT_SRC, "https://www.googleapis.com"].filter(Boolean),
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -79,7 +79,7 @@ app.use("/auth/", authLimiter);
 // CORS configuration - restrict to specific origins in production
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://yourdomain.com', 'https://www.yourdomain.com']
+    ? (process.env.CORS_ORIGIN || "'self'").split(",").map(s => s.trim()).filter(Boolean)
     : ['http://localhost:5173', 'http://localhost:3000'], // Vite dev server
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
