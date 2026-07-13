@@ -1,5 +1,5 @@
 import axios from "axios";
-import { signInWithCredential, GoogleAuthProvider } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
@@ -74,37 +74,16 @@ export const connectToBackend = async () => {
   }
 };
 
-export const googleSignIn = () => {
-  return new Promise((resolve, reject) => {
-    if (!window.google?.accounts?.oauth2) {
-      reject(new Error("Google Identity Services not loaded yet. Please try again."));
-      return;
-    }
+export const googleSignIn = async () => {
+  const provider = new GoogleAuthProvider();
+  provider.addScope("openid");
+  provider.addScope("email");
+  provider.addScope("profile");
 
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: "233139786180-9rhjoqiqdguc9phtg03kigmd6kmclahl.apps.googleusercontent.com",
-      scope: "openid email profile",
-      callback: async (response) => {
-        try {
-          const credential = GoogleAuthProvider.credential(response.id_token);
-          const result = await signInWithCredential(auth, credential);
-          const user = result.user;
-          const idToken = await user.getIdToken();
-          resolve({ user, idToken });
-        } catch (error) {
-          console.error("Google Sign-In Credential Error:", error);
-          reject(error);
-        }
-      },
-      error_callback: (error) => {
-        console.error("Google Sign-In GIS Error:", error);
-        reject(error);
-      }
-    });
-
-    // This must be called directly in the user gesture context
-    client.requestAccessToken();
-  });
+  const result = await signInWithPopup(auth, provider);
+  const user = result.user;
+  const idToken = await user.getIdToken();
+  return { user, idToken };
 };
 
 // Authenticate with backend and get JWT token
