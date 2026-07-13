@@ -1,5 +1,5 @@
 import axios from "axios";
-import { signInWithRedirect, getRedirectResult, GoogleAuthProvider } from "firebase/auth";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
@@ -74,30 +74,21 @@ export const connectToBackend = async () => {
   }
 };
 
-export const googleSignInRedirect = () => {
-  const provider = new GoogleAuthProvider();
-  signInWithRedirect(auth, provider);
-};
-
-export const getRedirectResultHandler = async () => {
+export const googleSignIn = async () => {
   try {
-    console.log("getRedirectResultHandler: calling getRedirectResult...");
-    const result = await getRedirectResult(auth);
-    console.log("getRedirectResultHandler: result:", result);
-
-    if (!result) {
-      console.log("getRedirectResultHandler: no result (null), checking URL hash:", window.location.hash);
-      return null;
-    }
+    console.log("googleSignIn: starting popup...");
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    console.log("googleSignIn: popup result received");
 
     const user = result.user;
-    console.log("getRedirectResultHandler: user found:", user.uid);
     const idToken = await user.getIdToken();
 
-    console.log("getRedirectResultHandler: idToken obtained");
+    console.log("googleSignIn: idToken obtained");
     return { user, idToken };
   } catch (error) {
-    console.error("getRedirectResultHandler Error:", error);
+    console.error("Google Sign-In Error:", error);
+    console.error("Google Sign-In Error code:", error.code);
     throw error;
   }
 };

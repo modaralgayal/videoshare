@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { googleSignInRedirect, getRedirectResultHandler, authenticateWithBackend, isAuthenticated } from "../controllers/user";
+import { googleSignIn, authenticateWithBackend, isAuthenticated } from "../controllers/user";
 
 export const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -18,39 +18,13 @@ export const SignIn = () => {
 
   // Handle redirect result from Google sign-in
   useEffect(() => {
-    const handleRedirectResult = async () => {
-      const savedType = sessionStorage.getItem("userType");
-      console.log("Redirect check - savedType:", savedType);
-
-      if (!savedType) return;
-
-      try {
-        console.log("Calling getRedirectResultHandler...");
-        const result = await getRedirectResultHandler();
-        console.log("Redirect result:", result);
-
-        if (!result) {
-          console.log("No redirect result found, clearing sessionStorage");
-          sessionStorage.removeItem("userType");
-          return;
-        }
-
-        const { idToken } = result;
-        const data = await authenticateWithBackend(idToken, savedType);
-
-        console.log("Authentication successful:", data.user);
-        sessionStorage.removeItem("userType");
-        navigate("/");
-      } catch (error) {
-        console.error("Google Sign-In Error:", error);
-        alert(error.message || "Authentication failed");
-        sessionStorage.removeItem("userType");
-        setShowUserTypeSelection(false);
-      }
-    };
-
-    handleRedirectResult();
-  }, [navigate]);
+    // Check if returning from redirect (backward compatibility)
+    const savedType = sessionStorage.getItem("userType");
+    if (savedType) {
+      console.log("Cleaning up stale redirect sessionStorage");
+      sessionStorage.removeItem("userType");
+    }
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -70,8 +44,21 @@ export const SignIn = () => {
   const handleUserTypeSelection = async (selectedType) => {
     try {
       setUserType(selectedType);
-      sessionStorage.setItem("userType", selectedType);
-      googleSignInRedirect();
+
+      // Now proceed with Google sign-in popup
+      const { idToken } = await googleSignIn();
+
+      // Authenticate with backend and get JWT token
+      const data = await authenticateWithBackend(idToken, selectedType);
+
+      console.log("Authentication successful:", data.user);
+
+      // Reset state
+      setShowUserTypeSelection(false);
+      setUserType("");
+
+      // Redirect to home page
+      navigate("/");
     } catch (error) {
       console.error("Google Sign-In Error:", error);
       alert(error.message || "Authentication failed");
