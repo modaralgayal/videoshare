@@ -51,14 +51,16 @@ router.post("/api/job", authenticateToken, async (req, res) => {
       return res.status(400).json({ error: difficultyResult.error || "Difficulty level is required" });
     }
 
+    let minBudgetResult, maxBudgetResult;
+
     // Validate budget if not unknown
     if (!req.body.budgetUnknown) {
-      const minBudgetResult = validateNumber(req.body.budgetMin, { min: 0 });
+      minBudgetResult = validateNumber(req.body.budgetMin, { min: 0 });
       if (!minBudgetResult.valid) {
         return res.status(400).json({ error: minBudgetResult.error || "Minimum budget must be a positive number" });
       }
 
-      const maxBudgetResult = validateNumber(req.body.budgetMax, { min: 0 });
+      maxBudgetResult = validateNumber(req.body.budgetMax, { min: 0 });
       if (!maxBudgetResult.valid) {
         return res.status(400).json({ error: maxBudgetResult.error || "Maximum budget must be a positive number" });
       }
@@ -74,6 +76,7 @@ router.post("/api/job", authenticateToken, async (req, res) => {
     }
 
     const id = uuidv4();
+    const services = servicesResult.value;
 
     // Create comprehensive job object
     const job = {
@@ -87,7 +90,7 @@ router.post("/api/job", authenticateToken, async (req, res) => {
       projectContext: req.body.projectContext || null,
 
       // Services
-      services: servicesResult.value,
+      services,
 
       // Location
       city: cityResult.value,
