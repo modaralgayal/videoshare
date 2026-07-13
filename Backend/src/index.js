@@ -22,6 +22,8 @@ const FRONTEND_DIST = join(__dirname, "../../Frontend/dist");
 // Security middleware
 // Helmet for various security headers
 app.use(helmet({
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false,
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],

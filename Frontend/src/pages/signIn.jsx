@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { initializeGoogleOneTap, authenticateWithBackend, isAuthenticated } from "../controllers/user";
+import { googleSignIn, authenticateWithBackend, isAuthenticated } from "../controllers/user";
 
 export const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -35,8 +35,8 @@ export const SignIn = () => {
     try {
       setUserType(selectedType);
 
-      // Show Google One Tap prompt (appears on the page, not a popup)
-      const { idToken } = await initializeGoogleOneTap();
+      // Now proceed with Google sign-in popup
+      const { idToken } = await googleSignIn();
 
       // Authenticate with backend and get JWT token
       const data = await authenticateWithBackend(idToken, selectedType);
