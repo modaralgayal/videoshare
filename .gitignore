@@ -1,0 +1,27 @@
+.env
+.env.development
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+Frontend/dist/
+Backend/dist/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+
+# Logs
+*.log
+npm-debug.log*
