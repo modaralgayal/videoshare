@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { googleSignIn, authenticateWithBackend, isAuthenticated } from "../controllers/user";
+import { googleSignInRedirect, getRedirectResultHandler, authenticateWithBackend, isAuthenticated } from "../controllers/user";
 
 export const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -14,6 +14,33 @@ export const SignIn = () => {
     if (isAuthenticated()) {
       navigate("/");
     }
+  }, [navigate]);
+
+  // Handle redirect result from Google sign-in
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      const savedType = sessionStorage.getItem("userType");
+      if (!savedType) return;
+
+      try {
+        const result = await getRedirectResultHandler();
+        if (!result) return;
+
+        const { idToken } = result;
+        const data = await authenticateWithBackend(idToken, savedType);
+
+        console.log("Authentication successful:", data.user);
+        sessionStorage.removeItem("userType");
+        navigate("/");
+      } catch (error) {
+        console.error("Google Sign-In Error:", error);
+        alert(error.message || "Authentication failed");
+        sessionStorage.removeItem("userType");
+        setShowUserTypeSelection(false);
+      }
+    };
+
+    handleRedirectResult();
   }, [navigate]);
 
   const handleSubmit = (e) => {
@@ -34,21 +61,8 @@ export const SignIn = () => {
   const handleUserTypeSelection = async (selectedType) => {
     try {
       setUserType(selectedType);
-      
-      // Now proceed with Google sign-in
-      const { user, idToken } = await googleSignIn();
-
-      // Authenticate with backend and get JWT token
-      const data = await authenticateWithBackend(idToken, selectedType);
-
-      console.log("Authentication successful:", data.user);
-      
-      // Reset state
-      setShowUserTypeSelection(false);
-      setUserType("");
-
-      // Redirect to home page
-      navigate("/");
+      sessionStorage.setItem("userType", selectedType);
+      googleSignInRedirect();
     } catch (error) {
       console.error("Google Sign-In Error:", error);
       alert(error.message || "Authentication failed");

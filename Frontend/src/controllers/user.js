@@ -1,8 +1,8 @@
 import axios from "axios";
-import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { signInWithRedirect, getRedirectResult, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "../config/firebaseConfig";
 
-const API_BASE_URL = "http://localhost:3000";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 // Get stored JWT token
 export const getToken = () => {
@@ -74,17 +74,22 @@ export const connectToBackend = async () => {
   }
 };
 
-export const googleSignIn = async () => {
+export const googleSignInRedirect = () => {
+  const provider = new GoogleAuthProvider();
+  signInWithRedirect(auth, provider);
+};
+
+export const getRedirectResultHandler = async () => {
   try {
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
+    const result = await getRedirectResult(auth);
+    if (!result) return null;
 
     const user = result.user;
     const idToken = await user.getIdToken();
 
     return { user, idToken };
   } catch (error) {
-    console.error("Google Sign-In Error:", error);
+    console.error("Redirect Result Error:", error);
     throw error;
   }
 };
